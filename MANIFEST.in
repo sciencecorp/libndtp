@@ -1,0 +1,2 @@
+include synapse/api/*.pb.h
+include synapse/api/*.pb.cc
