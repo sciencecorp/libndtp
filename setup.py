@@ -1,56 +1,64 @@
-from setuptools import setup, Extension, find_packages
-from pybind11.setup_helpers import Pybind11Extension, build_ext
 import os
 import subprocess
+import sys
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext
 
 
-def pkg_config(package, kw):
-    flag_map = {"-I": "include_dirs", "-L": "library_dirs", "-l": "libraries"}
-    try:
-        tokens = (
-            subprocess.check_output(["pkg-config", "--libs", "--cflags", package])
-            .decode("utf-8")
-            .split()
+class CMakeExtension(Extension):
+    def __init__(self, name, sourcedir=""):
+        Extension.__init__(self, name, sources=[])
+        self.sourcedir = os.path.abspath(sourcedir)
+
+
+class CMakeBuild(build_ext):
+    def run(self):
+        try:
+            subprocess.check_output(["cmake", "--version"])
+        except OSError:
+            raise RuntimeError(
+                "CMake must be installed to build the following extensions: "
+                + ", ".join(e.name for e in self.extensions)
+            )
+
+        for ext in self.extensions:
+            self.build_extension(ext)
+
+    def build_extension(self, ext):
+        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+        cmake_args = [
+            "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=" + extdir,
+            "-DPYTHON_EXECUTABLE=" + sys.executable,
+        ]
+
+        cfg = "Debug" if self.debug else "Release"
+        build_args = ["--config", cfg]
+
+        cmake_args += ["-DCMAKE_BUILD_TYPE=" + cfg]
+        build_args += ["--", "-j2"]
+
+        env = os.environ.copy()
+        env["CXXFLAGS"] = '{} -DVERSION_INFO=\\"{}\\"'.format(
+            env.get("CXXFLAGS", ""), self.distribution.get_version()
         )
-    except subprocess.CalledProcessError:
-        return kw
+        if not os.path.exists(self.build_temp):
+            os.makedirs(self.build_temp)
+        subprocess.check_call(
+            ["cmake", ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env
+        )
+        subprocess.check_call(
+            ["cmake", "--build", "."] + build_args, cwd=self.build_temp
+        )
 
-    for token in tokens:
-        if token[:2] in flag_map:
-            kw.setdefault(flag_map.get(token[:2]), []).append(token[2:])
-        else:
-            kw.setdefault("extra_compile_args", []).append(token)
-    return kw
-
-
-base_dir = os.path.dirname(os.path.abspath(__file__))
-synapse_include_dir = os.path.join(base_dir, "synapse")
-
-ext_kwargs = {
-    "include_dirs": [synapse_include_dir],
-    "extra_compile_args": ["-std=c++17"],
-}
-
-ext_kwargs = pkg_config("protobuf", ext_kwargs)
-
-ext_modules = [
-    Pybind11Extension("libndtp", ["ndtp.cpp"], **ext_kwargs),
-]
 
 setup(
     name="libndtp",
-    version="0.1.0",
-    author="Emma Zhou",
-    author_email="emmaz@science.xyz",
-    description="",
+    version="0.1",
+    author="Your Name",
+    author_email="your.email@example.com",
+    description="A C++ extension for NDTP",
     long_description="",
-    ext_modules=ext_modules,
-    cmdclass={"build_ext": build_ext},
+    ext_modules=[CMakeExtension("libndtp")],
+    cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
-    python_requires=">=3.7",
-    packages=find_packages(),
-    package_data={
-        "synapse": ["api/*.pb.h", "api/*.pb.cc"],
-    },
-    include_package_data=True,
 )

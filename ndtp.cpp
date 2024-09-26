@@ -3,6 +3,12 @@
 #include <vector>
 #include <cstdint>
 #include <variant>
+#include <sstream>
+#include <iomanip>
+#include <bitset>
+#include <cstring>
+#include <stdexcept>
+#include <cmath>
 
 #include <google/protobuf/port_def.inc>
 #include <google/protobuf/port_undef.inc>
@@ -436,7 +442,7 @@ public:
         std::vector<int> channel_data;
     };
 
-    static const DataType data_type = DataType::kBroadband;
+    static const DataType& data_type();
 
     int bit_width;
     bool signed_;
@@ -491,7 +497,7 @@ public:
 
 class SpiketrainData {
 public:
-    static const DataType data_type = DataType::kSpiketrain;
+    static const DataType& data_type();
 
     int64_t t0;
     std::vector<int> spike_counts;
@@ -523,8 +529,22 @@ public:
     }
 };
 
+const DataType& ElectricalBroadbandData::data_type() {
+    static const DataType type = DataType::kBroadband;
+    return type;
+}
+
+const DataType& SpiketrainData::data_type() {
+    static const DataType type = DataType::kSpiketrain;
+    return type;
+}
+
 
 PYBIND11_MODULE(libndtp, m) {
+    py::enum_<DataType>(m, "DataType")
+        .value("kBroadband", DataType::kBroadband)
+        .value("kSpiketrain", DataType::kSpiketrain);
+
     py::class_<NDTPHeader>(m, "NDTPHeader")
         .def(py::init<>())
         .def_readwrite("data_type", &NDTPHeader::data_type)
@@ -564,7 +584,7 @@ PYBIND11_MODULE(libndtp, m) {
         .def("pack", &ElectricalBroadbandData::pack)
         .def_static("from_ndtp_message", &ElectricalBroadbandData::from_ndtp_message)
         .def_static("unpack", &ElectricalBroadbandData::unpack)
-        .def_readonly_static("data_type", &ElectricalBroadbandData::data_type);
+        .def_property_readonly_static("data_type", [](py::object) { return ElectricalBroadbandData::data_type(); });
 
     py::class_<ElectricalBroadbandData::ChannelData>(m, "ElectricalBroadbandChannelData")
         .def(py::init<>())
@@ -578,5 +598,5 @@ PYBIND11_MODULE(libndtp, m) {
         .def("pack", &SpiketrainData::pack)
         .def_static("from_ndtp_message", &SpiketrainData::from_ndtp_message)
         .def_static("unpack", &SpiketrainData::unpack)
-        .def_readonly_static("data_type", &SpiketrainData::data_type);
+        .def_property_readonly_static("data_type", [](py::object) { return SpiketrainData::data_type(); });
 }
