@@ -7,6 +7,6 @@ C++ implementation and Python bindings for NDTP
 ```
 git submodule update --init --recursive
 pip install -r requirements.txt
-make
-pip install .
+python -m build
+pip install dist/libndtp-*.whl
 ```

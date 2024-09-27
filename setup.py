@@ -1,64 +1,32 @@
-import os
-import subprocess
-import sys
-from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext
-
-
-class CMakeExtension(Extension):
-    def __init__(self, name, sourcedir=""):
-        Extension.__init__(self, name, sources=[])
-        self.sourcedir = os.path.abspath(sourcedir)
-
-
-class CMakeBuild(build_ext):
-    def run(self):
-        try:
-            subprocess.check_output(["cmake", "--version"])
-        except OSError:
-            raise RuntimeError(
-                "CMake must be installed to build the following extensions: "
-                + ", ".join(e.name for e in self.extensions)
-            )
-
-        for ext in self.extensions:
-            self.build_extension(ext)
-
-    def build_extension(self, ext):
-        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
-        cmake_args = [
-            "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=" + extdir,
-            "-DPYTHON_EXECUTABLE=" + sys.executable,
-        ]
-
-        cfg = "Debug" if self.debug else "Release"
-        build_args = ["--config", cfg]
-
-        cmake_args += ["-DCMAKE_BUILD_TYPE=" + cfg]
-        build_args += ["--", "-j2"]
-
-        env = os.environ.copy()
-        env["CXXFLAGS"] = '{} -DVERSION_INFO=\\"{}\\"'.format(
-            env.get("CXXFLAGS", ""), self.distribution.get_version()
-        )
-        if not os.path.exists(self.build_temp):
-            os.makedirs(self.build_temp)
-        subprocess.check_call(
-            ["cmake", ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env
-        )
-        subprocess.check_call(
-            ["cmake", "--build", "."] + build_args, cwd=self.build_temp
-        )
-
+from skbuild import setup
+import setuptools
 
 setup(
     name="libndtp",
-    version="0.1",
+    version="0.1.0",
     author="Your Name",
     author_email="your.email@example.com",
-    description="A C++ extension for NDTP",
-    long_description="",
-    ext_modules=[CMakeExtension("libndtp")],
-    cmdclass=dict(build_ext=CMakeBuild),
-    zip_safe=False,
+    description="A C++ extension for NDTP with Python bindings",
+    long_description=open("README.md", encoding="utf-8").read(),
+    long_description_content_type="text/markdown",
+    packages=setuptools.find_packages(),
+    include_package_data=True,  # Include package data as specified in MANIFEST.in
+    cmake_minimum_required_version="3.20",
+    cmake_source_dir=".",  # Ensure CMakeLists.txt is in the root of libndtp
+    cmake_args=[
+        "-DBUILD_TESTING=OFF",
+        "-Dprotobuf_BUILD_TESTS=OFF",
+        "-Dprotobuf_WITH_ZLIB=OFF",
+        "-Dprotobuf_BUILD_EXAMPLES=OFF",
+        "-Dprotobuf_BUILD_PROTOC_BINARIES=ON",  # Ensure protoc is built
+        "-DCMAKE_BUILD_TYPE=Release",
+        # Add any other necessary CMake arguments here
+    ],
+    python_requires=">=3.7",
+    install_requires=[
+        "pybind11>=2.6.0",
+        "protobuf>=3.0.0",
+        "grpcio-tools>=1.38.0",
+        # Remove or correct any unnecessary dependencies
+    ],
 )

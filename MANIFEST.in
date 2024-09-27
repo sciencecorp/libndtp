@@ -1,2 +1,1 @@
-include synapse/api/*.pb.h
-include synapse/api/*.pb.cc
+recursive-include synapse-api *.proto
