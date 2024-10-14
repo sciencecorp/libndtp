@@ -1,6 +1,5 @@
-// src/Types.cpp
-#include "libndtp/Types.hpp"
-#include "libndtp/Ndtp.hpp"
+#include "science/libndtp/types.hpp"
+#include "science/libndtp/ndtp.hpp"
 
 namespace libndtp {
 
@@ -12,7 +11,7 @@ std::vector<ByteArray> ElectricalBroadbandData::pack(int seq_number) const {
     for(const auto& channel : channels) {
         NDTPHeader header;
         header.version = NDTP_VERSION;
-        header.data_type = DataType::kBroadband;
+        header.data_type = synapse::DataType::kBroadband;
         header.timestamp = t0;
         header.seq_number = seq_number + seq_number_offset;
 
@@ -59,7 +58,7 @@ std::vector<ByteArray> SpiketrainData::pack(int seq_number) const {
 
     NDTPHeader header;
     header.version = NDTP_VERSION;
-    header.data_type = DataType::kSpiketrain;
+    header.data_type = synapse::DataType::kSpiketrain;
     header.timestamp = 0; // Assign appropriate timestamp
     header.seq_number = seq_number;
 

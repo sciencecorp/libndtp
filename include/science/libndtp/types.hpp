@@ -4,10 +4,10 @@
 #include <vector>
 #include <cstdint>
 #include <stdexcept>
-#include "libndtp/Ndtp.hpp"
+#include "science/libndtp/ndtp.hpp"
+#include "science/libndtp/utils.hpp"
 
 namespace libndtp {
-
 /**
  * ElectricalBroadbandData represents a collection of broadband data channels.
  */

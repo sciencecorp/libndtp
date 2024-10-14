@@ -4,8 +4,8 @@
 #include <vector>
 #include <cstdint>
 #include <stdexcept>
-#include "libndtp/Utilities.hpp"
-#include "datatype.pb.h" // Generated from your .proto files
+#include "science/libndtp/utils.hpp"
+#include "science/synapse/api/datatype.pb.h"
 
 namespace libndtp {
 

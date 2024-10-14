@@ -1,6 +1,6 @@
 // src/Ndtp.cpp
-#include "libndtp/Ndtp.hpp"
-#include "libndtp/Utilities.hpp"
+#include "science/libndtp/ndtp.hpp"
+#include "science/libndtp/utils.hpp"
 #include <iostream>
 
 namespace libndtp {
@@ -156,10 +156,10 @@ ByteArray NDTPMessage::pack() const {
     ByteArray packed_header = header.pack();
     ByteArray packed_payload;
 
-    if(header.data_type == DataType::kBroadband) {
+    if(header.data_type == synapse::DataType::kBroadband) {
         packed_payload = broadband_payload.pack();
     }
-    else if(header.data_type == DataType::kSpiketrain) {
+    else if(header.data_type == synapse::DataType::kSpiketrain) {
         packed_payload = spiketrain_payload.pack();
     }
     else {
@@ -207,10 +207,10 @@ NDTPMessage NDTPMessage::unpack(const ByteArray& data) {
     NDTPMessage msg;
     msg.header = hdr;
 
-    if(hdr.data_type == DataType::kBroadband) {
+    if(hdr.data_type == synapse::DataType::kBroadband) {
         msg.broadband_payload = NDTPPayloadBroadband::unpack(payload_data, 0);
     }
-    else if(hdr.data_type == DataType::kSpiketrain) {
+    else if(hdr.data_type == synapse::DataType::kSpiketrain) {
         msg.spiketrain_payload = NDTPPayloadSpiketrain::unpack(payload_data, 0);
     }
     else {
