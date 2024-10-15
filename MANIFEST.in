@@ -1,1 +1,1 @@
-recursive-include synapse-api *.proto
+recursive-include external/sciencecorp/synapse-api *.proto
