@@ -6,7 +6,6 @@ namespace libndtp {
 
 TEST(NDTPTest, NDTPHeaderPackUnpack) {
   NDTPHeader header{.data_type = synapse::DataType::kBroadband, .timestamp = 1234567890, .seq_number = 42};
-  std::cout << "header: " << header.version << std::endl;
   auto packed = header.pack();
   auto unpacked = NDTPHeader::unpack(packed);
   EXPECT_TRUE(unpacked == header);
@@ -36,7 +35,7 @@ TEST(NDTPTest, NDTPHeaderPackUnpack) {
 
   // insufficient data size
   std::vector<uint8_t> insufficient_data;
-  insufficient_data.push_back(constants::kNDTPVersion);
+  insufficient_data.push_back(kNDTPVersion);
   insufficient_data.insert(
       insufficient_data.end(), reinterpret_cast<const uint8_t*>(&data_type),
       reinterpret_cast<const uint8_t*>(&data_type) + sizeof(uint8_t)
@@ -80,13 +79,13 @@ TEST(NDTPTest, NDTPPayloadBroadbandPackUnpack) {
   EXPECT_EQ((packed[1] << 16) | (packed[2] << 8) | packed[3], sample_rate);
 }
 
-// TEST(NDTPTest, NDTP_PAYLOAD_SPIKETRAIN_DATA) {
-//   std::vector<int> spike_counts = {1, 2, 3, 2, 1};
-//   NDTPPayloadSpiketrain payload(spike_counts);
-//   auto packed = payload.pack();
-//   auto unpacked = NDTPPayloadSpiketrain::unpack(packed);
-//   EXPECT_EQ(unpacked.spike_counts, spike_counts);
-// }
+TEST(NDTPTest, NDTP_PAYLOAD_SPIKETRAIN_DATA) {
+  std::vector<int> spike_counts = {1, 2, 3, 2, 1};
+  NDTPPayloadSpiketrain payload{.spike_counts = spike_counts};
+  auto packed = payload.pack();
+  auto unpacked = NDTPPayloadSpiketrain::unpack(packed);
+  EXPECT_EQ(unpacked.spike_counts, spike_counts);
+}
 
 // TEST(NDTPTest, NDTP_MESSAGE) {
 //   uint32_t bit_width = 12;
