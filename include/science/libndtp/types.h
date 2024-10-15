@@ -8,6 +8,7 @@
 #include "science/libndtp/utils.h"
 
 namespace science::libndtp {
+
 /**
  * ElectricalBroadbandData represents a collection of broadband data channels.
  */
