@@ -18,7 +18,7 @@ struct ElectricalBroadbandData {
      */
   struct ChannelData {
     uint32_t channel_id;
-    std::vector<int> channel_data;
+    std::vector<uint64_t> channel_data;
   };
 
   int bit_width;
@@ -28,7 +28,7 @@ struct ElectricalBroadbandData {
   std::vector<ChannelData> channels;
 
   // Packs the data into a list of NDTP messages.
-  std::vector<ByteArray> pack(int seq_number) const;
+  std::vector<ByteArray> pack(uint64_t seq_number) const;
 
   // Unpacks the data from NDTP messages.
   static ElectricalBroadbandData unpack(const NDTPMessage& msg);
@@ -39,11 +39,12 @@ struct ElectricalBroadbandData {
  * BinnedSpiketrainData represents spike count data.
  */
 struct BinnedSpiketrainData {
-  std::vector<int> spike_counts;
   uint64_t t0;
+  uint8_t bin_size_ms;
+  std::vector<uint8_t> spike_counts;
 
   // Packs the data into a list of NDTP messages.
-  std::vector<ByteArray> pack(int seq_number) const;
+  std::vector<ByteArray> pack(uint64_t seq_number) const;
 
   // Unpacks the data from NDTP messages.
   static BinnedSpiketrainData unpack(const NDTPMessage& msg);

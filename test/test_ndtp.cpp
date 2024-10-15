@@ -71,22 +71,27 @@ TEST(NDTPTest, NDTPPayloadBroadbandPackUnpack) {
   EXPECT_EQ(unpacked.channels[0].channel_id, 0);
 
   EXPECT_EQ(unpacked.channels[1].channel_id, 1);
-  EXPECT_EQ(unpacked.channels[1].channel_data, std::vector<int>({4, 5, 6}));
+  EXPECT_EQ(unpacked.channels[1].channel_data, std::vector<uint64_t>({4, 5, 6}));
 
   EXPECT_EQ(unpacked.channels[2].channel_id, 2);
-  EXPECT_EQ(unpacked.channels[2].channel_data, std::vector<int>({3000, 2000, 1000}));
+  EXPECT_EQ(unpacked.channels[2].channel_data, std::vector<uint64_t>({3000, 2000, 1000}));
 
   EXPECT_EQ(packed[0] >> 1, bit_width);
 
-  EXPECT_EQ((packed[1] << 16) | (packed[2] << 8) | packed[3], sample_rate);
+  EXPECT_EQ(ntohl((packed[1] << 24) | (packed[2] << 16) | (packed[3] << 8)), sample_rate);
+  EXPECT_EQ(ntohl((packed[3] << 16) | (packed[2] << 8) | (packed[1])), htonl(sample_rate));
 }
 
 TEST(NDTPTest, NDTPPayloadSpiketrainPackUnpack) {
-  std::vector<int> spike_counts = {1, 2, 3, 2, 1};
-  NDTPPayloadSpiketrain payload{.spike_counts = spike_counts};
+  std::vector<uint8_t> spike_counts = {1, 2, 3, 2, 1};
+  NDTPPayloadSpiketrain payload{
+    .spike_counts = spike_counts,
+    .bin_size_ms = 1,
+  };
   auto packed = payload.pack();
   auto unpacked = NDTPPayloadSpiketrain::unpack(packed);
   EXPECT_EQ(unpacked.spike_counts, spike_counts);
+  EXPECT_EQ(unpacked.bin_size_ms, 1);
 }
 
 TEST(NDTPTest, NDTPMessagePackUnpack) {
@@ -124,7 +129,7 @@ TEST(NDTPTest, NDTPMessagePackUnpack) {
     .seq_number = 42
   };
   NDTPPayloadSpiketrain payload2 {
-    .spike_counts = std::vector<int>{1, 2, 3, 2, 1}
+    .spike_counts = std::vector<uint8_t>{1, 2, 3, 2, 1}
   };
   NDTPMessage message2 {
     .header = header2,

@@ -4,7 +4,7 @@
 namespace science::libndtp {
 
 // Implementation of ElectricalBroadbandData
-std::vector<ByteArray> ElectricalBroadbandData::pack(int seq_number) const {
+std::vector<ByteArray> ElectricalBroadbandData::pack(uint64_t seq_number) const {
   std::vector<ByteArray> packets;
   int seq_number_offset = 0;
 
@@ -51,7 +51,7 @@ ElectricalBroadbandData ElectricalBroadbandData::unpack(const NDTPMessage& msg) 
 }
 
 // Implementation of BinnedSpiketrainData
-std::vector<ByteArray> BinnedSpiketrainData::pack(int seq_number) const {
+std::vector<ByteArray> BinnedSpiketrainData::pack(uint64_t seq_number) const {
   std::vector<ByteArray> packets;
 
   NDTPHeader header;
@@ -75,6 +75,7 @@ std::vector<ByteArray> BinnedSpiketrainData::pack(int seq_number) const {
 BinnedSpiketrainData BinnedSpiketrainData::unpack(const NDTPMessage& msg) {
   BinnedSpiketrainData data;
   data.spike_counts = std::get<NDTPPayloadSpiketrain>(msg.payload).spike_counts;
+  data.bin_size_ms = std::get<NDTPPayloadSpiketrain>(msg.payload).bin_size_ms;
   data.t0 = msg.header.timestamp;
   return data;
 }
