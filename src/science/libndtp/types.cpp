@@ -75,6 +75,7 @@ std::vector<ByteArray> BinnedSpiketrainData::pack(int seq_number) const {
 BinnedSpiketrainData BinnedSpiketrainData::unpack(const NDTPMessage& msg) {
   BinnedSpiketrainData data;
   data.spike_counts = std::get<NDTPPayloadSpiketrain>(msg.payload).spike_counts;
+  data.t0 = msg.header.timestamp;
   return data;
 }
 

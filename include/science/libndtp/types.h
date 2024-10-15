@@ -40,6 +40,7 @@ struct ElectricalBroadbandData {
  */
 struct BinnedSpiketrainData {
   std::vector<int> spike_counts;
+  uint64_t t0;
 
   // Packs the data into a list of NDTP messages.
   std::vector<ByteArray> pack(int seq_number) const;
