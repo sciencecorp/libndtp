@@ -21,7 +21,7 @@ struct ElectricalBroadbandData {
     };
 
     int bit_width;
-    bool signed_val;
+    bool is_signed;
     int sample_rate;
     uint64_t t0;
     std::vector<ChannelData> channels;

@@ -20,7 +20,8 @@ std::pair<ByteArray, BitOffset> to_bytes(
     int bit_width,
     const ByteArray& existing = ByteArray(),
     int writing_bit_offset = 0,
-    bool signed_val = false
+    bool signed_val = false,
+    bool byteorder_is_little = false
 );
 
 /**
@@ -32,7 +33,8 @@ std::tuple<std::vector<int>, BitOffset, ByteArray> to_ints(
     int bit_width,
     int count = 0,
     int start_bit = 0,
-    bool signed_val = false
+    bool signed_val = false,
+    bool byteorder_is_little = false
 );
 
 } // namespace libndtp

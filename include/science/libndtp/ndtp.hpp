@@ -7,22 +7,31 @@
 #include "science/libndtp/utils.hpp"
 #include "science/synapse/api/datatype.pb.h"
 
+namespace constants {
+    constexpr uint8_t kNDTPVersion = 0x01;
+    constexpr size_t kNDTPHeaderSize = 12;
+} // namespace constants
+
 namespace libndtp {
 
 /**
  * NDTPHeader represents the header of an NDTP message.
  */
 struct NDTPHeader {
-    uint8_t version;
+    uint8_t version = constants::kNDTPVersion;
     int data_type; // Assuming DataType is an enum defined in datatype.pb.h
     uint64_t timestamp;
     uint16_t seq_number;
 
-    // Packs the header into a byte array.
     ByteArray pack() const;
-
-    // Unpacks the header from a byte array.
     static NDTPHeader unpack(const ByteArray& data);
+
+    bool operator==(const NDTPHeader& other) const {
+        return data_type == other.data_type && timestamp == other.timestamp && seq_number == other.seq_number;
+    }
+    bool operator!=(const NDTPHeader& other) const {
+        return !(*this == other);
+    }
 };
 
 /**
@@ -36,23 +45,29 @@ struct NDTPPayloadBroadband {
         uint32_t channel_id; // 24-bit
         std::vector<int> channel_data;
 
-        // Packs the channel data into the payload.
-        void pack(int bit_width, bool signed_val, BitOffset& offset, ByteArray& payload) const;
-
-        // Unpacks the channel data from the payload.
-        static ChannelData unpack(const ByteArray& data, int bit_width, bool signed_val, BitOffset& offset);
+        bool operator==(const ChannelData& other) const {
+            return channel_id == other.channel_id && channel_data == other.channel_data;
+        }
+        bool operator!=(const ChannelData& other) const {
+            return !(*this == other);
+        }
     };
 
-    bool signed_val;
-    int bit_width;
-    int sample_rate;
+    bool is_signed; // 1 bit
+    uint8_t bit_width; // 7 bits
+    uint32_t ch_count; // 3 bytes
+    uint16_t sample_rate; // 2 bytes
     std::vector<ChannelData> channels;
 
-    // Packs the broadband payload into a byte array.
     ByteArray pack() const;
+    static NDTPPayloadBroadband unpack(const ByteArray& data);
 
-    // Unpacks the broadband payload from a byte array.
-    static NDTPPayloadBroadband unpack(const ByteArray& data, BitOffset& offset);
+    bool operator==(const NDTPPayloadBroadband& other) const {
+        return is_signed == other.is_signed && bit_width == other.bit_width  && sample_rate == other.sample_rate && channels == other.channels;
+    }
+    bool operator!=(const NDTPPayloadBroadband& other) const {
+        return !(*this == other);
+    }
 };
 
 /**

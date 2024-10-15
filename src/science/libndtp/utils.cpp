@@ -9,7 +9,8 @@ std::pair<ByteArray, BitOffset> to_bytes(
     int bit_width,
     const ByteArray& existing,
     int writing_bit_offset,
-    bool signed_val
+    bool signed_val,
+    bool byteorder_is_little
 ) {
     if (bit_width <= 0) {
         throw std::invalid_argument("bit width must be > 0");
@@ -61,7 +62,11 @@ std::pair<ByteArray, BitOffset> to_bytes(
             int shift = remaining_bits - bits_to_write;
             int bits_add = (val >> shift) & ((1 << bits_to_write) - 1);
 
-            current_byte |= bits_add << (available_bits - bits_to_write);
+            if (byteorder_is_little) {
+                current_byte |= bits_add << bits_in_current_byte;
+            } else {
+                current_byte |= bits_add << (available_bits - bits_to_write);
+            }
 
             remaining_bits -= bits_to_write;
             bits_in_current_byte += bits_to_write;
@@ -92,7 +97,8 @@ std::tuple<std::vector<int>, BitOffset, ByteArray> to_ints(
     int bit_width,
     int count,
     int start_bit,
-    bool signed_val
+    bool signed_val,
+    bool byteorder_is_little
 ) {
     if (bit_width <= 0) {
         throw std::invalid_argument("bit width must be > 0");

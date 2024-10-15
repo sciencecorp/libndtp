@@ -10,13 +10,13 @@ std::vector<ByteArray> ElectricalBroadbandData::pack(int seq_number) const {
 
     for(const auto& channel : channels) {
         NDTPHeader header;
-        header.version = NDTP_VERSION;
+        header.version = constants::kNDTPVersion;
         header.data_type = synapse::DataType::kBroadband;
         header.timestamp = t0;
         header.seq_number = seq_number + seq_number_offset;
 
         NDTPPayloadBroadband payload;
-        payload.signed_val = signed_val;
+        payload.is_signed = is_signed;
         payload.bit_width = bit_width;
         payload.sample_rate = sample_rate;
         payload.channels.push_back({
@@ -38,7 +38,7 @@ std::vector<ByteArray> ElectricalBroadbandData::pack(int seq_number) const {
 ElectricalBroadbandData ElectricalBroadbandData::unpack(const NDTPMessage& msg) {
     ElectricalBroadbandData data;
     data.bit_width = msg.broadband_payload.bit_width;
-    data.signed_val = msg.broadband_payload.signed_val;
+    data.is_signed = msg.broadband_payload.is_signed;
     data.sample_rate = msg.broadband_payload.sample_rate;
     data.t0 = msg.header.timestamp;
 
@@ -57,7 +57,7 @@ std::vector<ByteArray> SpiketrainData::pack(int seq_number) const {
     std::vector<ByteArray> packets;
 
     NDTPHeader header;
-    header.version = NDTP_VERSION;
+    header.version = constants::kNDTPVersion;
     header.data_type = synapse::DataType::kSpiketrain;
     header.timestamp = 0; // Assign appropriate timestamp
     header.seq_number = seq_number;
