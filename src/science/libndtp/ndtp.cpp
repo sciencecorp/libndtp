@@ -166,96 +166,74 @@ NDTPPayloadSpiketrain NDTPPayloadSpiketrain::unpack(const ByteArray& data) {
   return NDTPPayloadSpiketrain{.spike_counts = spike_counts};
 }
 
-// // Implementation of NDTPMessage
-// ByteArray NDTPMessage::pack() const {
-//     ByteArray packed_header = header.pack();
-//     ByteArray packed_payload;
+// Implementation of NDTPMessage
+ByteArray NDTPMessage::pack() const {
+  auto header_data = header.pack();
+  std::vector<uint8_t> result(header_data);
 
-//     if(header.data_type == synapse::DataType::kBroadband) {
-//         packed_payload = broadband_payload.pack();
-//     }
-//     else if(header.data_type == synapse::DataType::kSpiketrain) {
-//         packed_payload = spiketrain_payload.pack();
-//     }
-//     else {
-//         throw std::invalid_argument("Unknown data type");
-//     }
+  if (std::holds_alternative<NDTPPayloadBroadband>(payload)) {
+    auto broadband = std::get<NDTPPayloadBroadband>(payload);
+    std::cout << "broadband bit width: " << broadband.bit_width << std::endl;
+    std::cout << "broadband sample rate: " << broadband.sample_rate << std::endl;
+    std::cout << "broadband num channels: " << broadband.channels.size() << std::endl;
 
-//     // Concatenate header and payload
-//     ByteArray message = packed_header;
-//     message.insert(message.end(), packed_payload.begin(), packed_payload.end());
+    auto payload_data = broadband.pack();
+    result.insert(result.end(), payload_data.begin(), payload_data.end());
+  } else if (std::holds_alternative<NDTPPayloadSpiketrain>(payload)) {
+    auto payload_data = std::get<NDTPPayloadSpiketrain>(payload).pack();
+    result.insert(result.end(), payload_data.begin(), payload_data.end());
+  } else {
+    throw std::runtime_error("Unsupported payload type");
+  }
 
-//     // Calculate CRC16
-//     uint16_t crc = crc16(message);
-//     message.push_back(crc & 0xFF);
-//     message.push_back((crc >> 8) & 0xFF);
+  uint16_t crc = crc16(result);
+  result.push_back(static_cast<uint8_t>(crc & 0xFF));
+  result.push_back(static_cast<uint8_t>((crc >> 8) & 0xFF));
 
-//     return message;
-// }
+  return result;
+}
 
-// NDTPMessage NDTPMessage::unpack(const ByteArray& data) {
-//     // Calculate expected sizes
-//     size_t header_size = 16; // Adjust based on NDTPHeader::pack implementation
-//     size_t crc_size = 2;
+NDTPMessage NDTPMessage::unpack(const ByteArray& data) {
+  if (data.size() < 16) {
+    throw std::runtime_error("Invalid data size for NDTPMessage");
+  }
+  uint16_t received_crc = (static_cast<uint16_t>(data[data.size() - 1]) << 8) | data[data.size() - 2];
+  std::vector<uint8_t> payload_bytes(data.begin(), data.end() - 2);
+  if (!crc16_verify(payload_bytes, received_crc)) {
+    throw std::runtime_error("CRC verification failed");
+  }
 
-//     if(data.size() < header_size + crc_size) {
-//         throw std::invalid_argument("Data too short to unpack NDTPMessage");
-//     }
+  auto header = NDTPHeader::unpack(std::vector<uint8_t>(data.begin(), data.begin() + NDTPHeader::kNDTPHeaderSize));
+  if (header.data_type == synapse::DataType::kBroadband) {
+    auto unpacked_payload = NDTPPayloadBroadband::unpack(payload_bytes);
+    return NDTPMessage{.header = header, .payload = unpacked_payload};
+  } else if (header.data_type == synapse::DataType::kSpiketrain) {
+    auto unpacked_payload = NDTPPayloadSpiketrain::unpack(payload_bytes);
+    return NDTPMessage{.header = header, .payload = unpacked_payload};
+  }
 
-//     // Extract CRC
-//     uint16_t received_crc = data[data.size() - 2] | (data[data.size() - 1] << 8);
+  throw std::runtime_error("Unsupported data type in NDTP header");
+}
 
-//     // Extract header
-//     ByteArray header_data(data.begin(), data.begin() + header_size);
-//     NDTPHeader hdr = NDTPHeader::unpack(header_data);
+// CRC16 Implementation
+uint16_t NDTPMessage::crc16(const ByteArray& data, uint16_t poly, uint16_t init) {
+  uint16_t crc = init;
+  for (const auto& byte : data) {
+    crc ^= byte << 8;
+    for (int i = 0; i < 8; ++i) {
+      if (crc & 0x8000) {
+        crc = (crc << 1) ^ poly;
+      } else {
+        crc <<= 1;
+      }
+      crc &= 0xFFFF;
+    }
+  }
+  return crc & 0xFFFF;
+}
 
-//     // Extract payload
-//     ByteArray payload_data(data.begin() + header_size, data.end() - crc_size);
-
-//     // Verify CRC
-//     ByteArray message_without_crc(data.begin(), data.end() - crc_size);
-//     if(crc16(message_without_crc) != received_crc) {
-//         throw std::invalid_argument("CRC16 verification failed");
-//     }
-
-//     // Populate NDTPMessage
-//     NDTPMessage msg;
-//     msg.header = hdr;
-
-//     if(hdr.data_type == synapse::DataType::kBroadband) {
-//         msg.broadband_payload = NDTPPayloadBroadband::unpack(payload_data, 0);
-//     }
-//     else if(hdr.data_type == synapse::DataType::kSpiketrain) {
-//         msg.spiketrain_payload = NDTPPayloadSpiketrain::unpack(payload_data, 0);
-//     }
-//     else {
-//         throw std::invalid_argument("Unknown data type");
-//     }
-
-//     return msg;
-// }
-
-// // CRC16 Implementation
-// uint16_t NDTPMessage::crc16(const ByteArray& data, uint16_t poly, uint16_t init) {
-//     uint16_t crc = init;
-
-//     for(auto byte : data) {
-//         crc ^= static_cast<uint16_t>(byte) << 8;
-//         for(int _ = 0; _ < 8; ++_) {
-//             if(crc & 0x8000) {
-//                 crc = (crc << 1) ^ poly;
-//             }
-//             else {
-//                 crc <<= 1;
-//             }
-//         }
-//     }
-
-//     return crc & 0xFFFF;
-// }
-
-// bool NDTPMessage::crc16_verify(const ByteArray& data, uint16_t crc) {
-//     return crc16(data) == crc;
-// }
+bool NDTPMessage::crc16_verify(const ByteArray& data, uint16_t crc) {
+    return crc16(data) == crc;
+}
 
 }  // namespace libndtp

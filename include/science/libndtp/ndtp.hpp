@@ -87,8 +87,7 @@ struct NDTPPayloadSpiketrain {
  */
 struct NDTPMessage {
   NDTPHeader header;
-  NDTPPayloadBroadband broadband_payload;
-  NDTPPayloadSpiketrain spiketrain_payload;
+  std::variant<NDTPPayloadBroadband, NDTPPayloadSpiketrain> payload;
 
   // Packs the entire message into a byte array, including CRC16.
   ByteArray pack() const;

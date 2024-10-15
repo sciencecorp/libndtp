@@ -58,7 +58,9 @@ TEST(NDTPTest, NDTPPayloadBroadbandPackUnpack) {
   channels.push_back({1, {4, 5, 6}});
   channels.push_back({2, {3000, 2000, 1000}});
 
-  NDTPPayloadBroadband payload{.is_signed = is_signed, .bit_width = bit_width, .sample_rate = sample_rate, .channels = channels};
+  NDTPPayloadBroadband payload{
+      .is_signed = is_signed, .bit_width = bit_width, .sample_rate = sample_rate, .channels = channels
+  };
   auto packed = payload.pack();
   auto unpacked = NDTPPayloadBroadband::unpack(packed);
   EXPECT_EQ(unpacked.bit_width, bit_width);
@@ -79,7 +81,7 @@ TEST(NDTPTest, NDTPPayloadBroadbandPackUnpack) {
   EXPECT_EQ((packed[1] << 16) | (packed[2] << 8) | packed[3], sample_rate);
 }
 
-TEST(NDTPTest, NDTP_PAYLOAD_SPIKETRAIN_DATA) {
+TEST(NDTPTest, NDTPPayloadSpiketrainPackUnpack) {
   std::vector<int> spike_counts = {1, 2, 3, 2, 1};
   NDTPPayloadSpiketrain payload{.spike_counts = spike_counts};
   auto packed = payload.pack();
@@ -87,24 +89,30 @@ TEST(NDTPTest, NDTP_PAYLOAD_SPIKETRAIN_DATA) {
   EXPECT_EQ(unpacked.spike_counts, spike_counts);
 }
 
-// TEST(NDTPTest, NDTP_MESSAGE) {
-//   uint32_t bit_width = 12;
-//   uint32_t sample_rate = 3;
-//   bool is_signed = false;
-//   NDTPHeader header(synapse::DataType::kBroadband, 1234567890, 42);
-//   NDTPPayloadBroadband payload(is_signed, bit_width, sample_rate, {NDTPPayloadBroadbandChannelData(0, {1, 2, 3})});
-//   NDTPMessage message(header, payload);
-//   auto packed = message.pack();
-//   auto unpacked = NDTPMessage::unpack(packed);
-//   EXPECT_EQ(unpacked.header, header);
-//   EXPECT_EQ(std::get<NDTPPayloadBroadband>(unpacked.payload), payload);
+TEST(NDTPTest, NDTPMessagePackUnpack) {
+  uint8_t bit_width = 12;
+  uint16_t sample_rate = 3;
+  bool is_signed = false;
+  NDTPHeader header{.data_type = synapse::DataType::kBroadband, .timestamp = 1234567890, .seq_number = 42};
+  NDTPPayloadBroadband payload{
+      .is_signed = is_signed,
+      .bit_width = bit_width,
+      .sample_rate = sample_rate,
+      .channels = {NDTPPayloadBroadband::ChannelData{.channel_id = 0, .channel_data = {1, 2, 3}}}
+  };
+  NDTPMessage message{.header = header, .payload = payload};
+  auto packed = message.pack();
+  // auto unpacked = NDTPMessage::unpack(packed);
+  // EXPECT_EQ(unpacked.header, header);
+  // EXPECT_EQ(std::get<NDTPPayloadBroadband>(unpacked.payload), payload);
 
-//   // NDTPPayloadSpiketrain payload2(std::vector<int>{1, 2, 3, 2, 1});
-//   // NDTPMessage message2(header, payload2);
-//   // auto packed2 = message2.pack();
-//   // auto unpacked2 = NDTPMessage::unpack(packed2);
-//   // EXPECT_EQ(unpacked2.header, header);
-//   // EXPECT_EQ(std::get<NDTPPayloadSpiketrain>(unpacked2.payload), payload2);
-// }
+  NDTPHeader header2{.data_type = synapse::DataType::kSpiketrain, .timestamp = 1234567890, .seq_number = 42};
+  NDTPPayloadSpiketrain payload2{.spike_counts = std::vector<int>{1, 2, 3, 2, 1}};
+  NDTPMessage message2{.header = header2, .payload = payload2};
+  auto packed2 = message2.pack();
+  auto unpacked2 = NDTPMessage::unpack(packed2);
+  EXPECT_EQ(unpacked2.header, header2);
+  EXPECT_EQ(std::get<NDTPPayloadSpiketrain>(unpacked2.payload), payload2);
+}
 
-}  // namespace synapse
+}  // namespace libndtp

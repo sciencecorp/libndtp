@@ -23,7 +23,7 @@ std::vector<ByteArray> ElectricalBroadbandData::pack(int seq_number) const {
 
     NDTPMessage message;
     message.header = header;
-    message.broadband_payload = payload;
+    message.payload = payload;
 
     packets.push_back(message.pack());
     seq_number_offset += 1;
@@ -34,12 +34,13 @@ std::vector<ByteArray> ElectricalBroadbandData::pack(int seq_number) const {
 
 ElectricalBroadbandData ElectricalBroadbandData::unpack(const NDTPMessage& msg) {
   ElectricalBroadbandData data;
-  data.bit_width = msg.broadband_payload.bit_width;
-  data.is_signed = msg.broadband_payload.is_signed;
-  data.sample_rate = msg.broadband_payload.sample_rate;
+  auto payload = std::get<NDTPPayloadBroadband>(msg.payload);
+  data.bit_width = payload.bit_width;
+  data.is_signed = payload.is_signed;
+  data.sample_rate = payload.sample_rate;
   data.t0 = msg.header.timestamp;
 
-  for (const auto& channel : msg.broadband_payload.channels) {
+  for (const auto& channel : payload.channels) {
     ChannelData cd;
     cd.channel_id = channel.channel_id;
     cd.channel_data = channel.channel_data;
@@ -64,7 +65,7 @@ std::vector<ByteArray> SpiketrainData::pack(int seq_number) const {
 
   NDTPMessage message;
   message.header = header;
-  message.spiketrain_payload = payload;
+  message.payload = payload;
 
   packets.push_back(message.pack());
 
@@ -73,7 +74,7 @@ std::vector<ByteArray> SpiketrainData::pack(int seq_number) const {
 
 SpiketrainData SpiketrainData::unpack(const NDTPMessage& msg) {
   SpiketrainData data;
-  data.spike_counts = msg.spiketrain_payload.spike_counts;
+  data.spike_counts = std::get<NDTPPayloadSpiketrain>(msg.payload).spike_counts;
   return data;
 }
 
