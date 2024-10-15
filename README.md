@@ -38,7 +38,7 @@ To include this port in your project, add our [overlay port repo](https://github
 Then you will be able to include it in your CMakelists:
 
 ```
-synapse provides CMake targets:
+science-libndtp provides CMake targets:
 
   find_package(science-libndtp CONFIG REQUIRED)
   target_link_libraries(main PRIVATE science::libndtp)

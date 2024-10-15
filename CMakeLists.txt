@@ -19,7 +19,7 @@ configure_file(include/science/libndtp/version.h.in ${CMAKE_BINARY_DIR}/include/
 
 get_filename_component(PROTO_INCLUDE_DIR external/sciencecorp/synapse-api REALPATH)
 set(PROTO_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/sciencecorp/synapse-api")
-set(PROTO_OUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/science/synapse")
+set(PROTO_OUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/science/libndtp/synapse")
 file(MAKE_DIRECTORY ${PROTO_OUT_DIR})
 file(GLOB_RECURSE PROTOS ${PROTO_INCLUDE_DIR}/api/*.proto)
 
@@ -46,9 +46,9 @@ target_include_directories(
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/science/synapse>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/science/libndtp/synapse>
   $<INSTALL_INTERFACE:include>
-  $<INSTALL_INTERFACE:include/science/synapse>
+  $<INSTALL_INTERFACE:include/science/libndtp/synapse>
 )
 
 target_link_libraries(

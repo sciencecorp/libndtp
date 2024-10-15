@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <vector>
 #include "science/libndtp/utils.h"
-#include "science/synapse/api/datatype.pb.h"
+#include "science/libndtp/synapse/api/datatype.pb.h"
 
 namespace science::libndtp {
 
