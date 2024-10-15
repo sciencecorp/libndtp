@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include <science/libndtp/ndtp.hpp>
-#include <science/libndtp/types.hpp>
+#include <science/libndtp/ndtp.h>
+#include <science/libndtp/types.h>
 
-namespace libndtp {
+namespace science::libndtp {
 
 TEST(UtilsTest, ToBytesBasicFunctionality) {
   auto [result1, offset1] = to_bytes({1, 2, 3, 0}, 2);
@@ -121,4 +121,4 @@ TEST(UtilsTest, ToIntsErrorCases) {
   EXPECT_THROW(to_ints({0x01, 0x02}, 3), std::invalid_argument);
 }
 
-} // namespace libndtp
+} // namespace science::libndtp

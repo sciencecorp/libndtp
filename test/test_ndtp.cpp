@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include <science/libndtp/ndtp.hpp>
-#include <science/libndtp/types.hpp>
+#include <science/libndtp/ndtp.h>
+#include <science/libndtp/types.h>
 
-namespace libndtp {
+namespace science::libndtp {
 
 TEST(NDTPTest, NDTPHeaderPackUnpack) {
   NDTPHeader header{.data_type = synapse::DataType::kBroadband, .timestamp = 1234567890, .seq_number = 42};
@@ -35,7 +35,7 @@ TEST(NDTPTest, NDTPHeaderPackUnpack) {
 
   // insufficient data size
   std::vector<uint8_t> insufficient_data;
-  insufficient_data.push_back(kNDTPVersion);
+  insufficient_data.push_back(NDTP_VERSION);
   insufficient_data.insert(
       insufficient_data.end(), reinterpret_cast<const uint8_t*>(&data_type),
       reinterpret_cast<const uint8_t*>(&data_type) + sizeof(uint8_t)
@@ -93,26 +93,49 @@ TEST(NDTPTest, NDTPMessagePackUnpack) {
   uint8_t bit_width = 12;
   uint16_t sample_rate = 3;
   bool is_signed = false;
-  NDTPHeader header{.data_type = synapse::DataType::kBroadband, .timestamp = 1234567890, .seq_number = 42};
-  NDTPPayloadBroadband payload{
+  NDTPHeader header {
+    .data_type = synapse::DataType::kBroadband,
+    .timestamp = 1234567890,
+    .seq_number = 42
+  };
+  NDTPPayloadBroadband payload {
       .is_signed = is_signed,
       .bit_width = bit_width,
       .sample_rate = sample_rate,
       .channels = {NDTPPayloadBroadband::ChannelData{.channel_id = 0, .channel_data = {1, 2, 3}}}
   };
-  NDTPMessage message{.header = header, .payload = payload};
-  auto packed = message.pack();
-  // auto unpacked = NDTPMessage::unpack(packed);
-  // EXPECT_EQ(unpacked.header, header);
-  // EXPECT_EQ(std::get<NDTPPayloadBroadband>(unpacked.payload), payload);
+  NDTPMessage message {
+    .header = header,
+    .payload = payload
+  };
 
-  NDTPHeader header2{.data_type = synapse::DataType::kSpiketrain, .timestamp = 1234567890, .seq_number = 42};
-  NDTPPayloadSpiketrain payload2{.spike_counts = std::vector<int>{1, 2, 3, 2, 1}};
-  NDTPMessage message2{.header = header2, .payload = payload2};
+  auto b = std::get<NDTPPayloadBroadband>(message.payload);
+
+  auto packed = message.pack();
+
+
+  auto unpacked = NDTPMessage::unpack(packed);
+  EXPECT_EQ(unpacked.header, header) << "header is not equal to unpacked header";
+  EXPECT_EQ(std::get<NDTPPayloadBroadband>(unpacked.payload), payload) << "payload is not equal to unpacked payload";
+
+  NDTPHeader header2 {
+    .data_type = synapse::DataType::kSpiketrain,
+    .timestamp = 1234567890,
+    .seq_number = 42
+  };
+  NDTPPayloadSpiketrain payload2 {
+    .spike_counts = std::vector<int>{1, 2, 3, 2, 1}
+  };
+  NDTPMessage message2 {
+    .header = header2,
+    .payload = payload2
+  };
   auto packed2 = message2.pack();
   auto unpacked2 = NDTPMessage::unpack(packed2);
-  EXPECT_EQ(unpacked2.header, header2);
-  EXPECT_EQ(std::get<NDTPPayloadSpiketrain>(unpacked2.payload), payload2);
+
+  EXPECT_EQ(unpacked2.header, header2) << "header2 is not equal to unpacked2.header";
+
+  EXPECT_EQ(std::get<NDTPPayloadSpiketrain>(unpacked2.payload), payload2) << "payload2 is not equal to unpacked2.payload";
 }
 
-}  // namespace libndtp
+}  // namespace science::libndtp

@@ -1,12 +1,10 @@
-// include/libndtp/Utilities.hpp
 #pragma once
 
-#include <cstdint>
-#include <stdexcept>
 #include <tuple>
+#include <utility>
 #include <vector>
 
-namespace libndtp {
+namespace science::libndtp {
 
 using ByteArray = std::vector<uint8_t>;
 using BitOffset = int;
@@ -16,8 +14,8 @@ using BitOffset = int;
  * Handles both signed and unsigned integers.
  */
 std::pair<ByteArray, BitOffset> to_bytes(
-    const std::vector<int>& values, int bit_width, const ByteArray& existing = ByteArray(), int writing_bit_offset = 0,
-    bool signed_val = false, bool byteorder_is_little = false
+    const std::vector<int>& values, uint8_t bit_width, const ByteArray& existing = ByteArray(), int writing_bit_offset = 0,
+    bool signed_val = false, bool le = false
 );
 
 /**
@@ -25,8 +23,8 @@ std::pair<ByteArray, BitOffset> to_bytes(
  * Returns the extracted integers, the new bit offset, and the remaining data.
  */
 std::tuple<std::vector<int>, BitOffset, ByteArray> to_ints(
-    const ByteArray& data, int bit_width, int count = 0, int start_bit = 0, bool signed_val = false,
-    bool byteorder_is_little = false
+    const ByteArray& data, uint8_t bit_width, int count = 0, int start_bit = 0, bool signed_val = false,
+    bool le = false
 );
 
-}  // namespace libndtp
+}  // namespace science::libndtp

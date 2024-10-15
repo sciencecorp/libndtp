@@ -1,23 +1,23 @@
-// include/libndtp/Ndtp.hpp
+// include/libndtp/Ndtp.h
 #pragma once
 
 #include <cstdint>
 #include <stdexcept>
 #include <vector>
-#include "science/libndtp/utils.hpp"
+#include "science/libndtp/utils.h"
 #include "science/synapse/api/datatype.pb.h"
 
-namespace libndtp {
+namespace science::libndtp {
 
-static constexpr uint8_t kNDTPVersion = 0x01;
+static constexpr uint8_t NDTP_VERSION = 0x01;
 
 /**
  * NDTPHeader represents the header of an NDTP message.
  */
 struct NDTPHeader {
-  static constexpr size_t kNDTPHeaderSize = 12;
+  static constexpr size_t NDTP_HEADER_SIZE = 12;
 
-  uint8_t version = kNDTPVersion;
+  uint8_t version = NDTP_VERSION;
   int data_type;  // Assuming DataType is an enum defined in datatype.pb.h
   uint64_t timestamp;
   uint16_t seq_number;
@@ -71,7 +71,7 @@ struct NDTPPayloadBroadband {
  * NDTPPayloadSpiketrain represents spiketrain payload data.
  */
 struct NDTPPayloadSpiketrain {
-  static constexpr int kSpikeTrainBitWidth = 2;
+  static constexpr uint8_t BIT_WIDTH_BINNED_SPIKES = 2;
   std::vector<int> spike_counts;
 
   ByteArray pack() const;
@@ -103,4 +103,4 @@ struct NDTPMessage {
   static bool crc16_verify(const ByteArray& data, uint16_t crc);
 };
 
-}  // namespace libndtp
+}  // namespace science::libndtp

@@ -1,7 +1,7 @@
-#include "science/libndtp/types.hpp"
-#include "science/libndtp/ndtp.hpp"
+#include "science/libndtp/types.h"
+#include "science/libndtp/ndtp.h"
 
-namespace libndtp {
+namespace science::libndtp {
 
 // Implementation of ElectricalBroadbandData
 std::vector<ByteArray> ElectricalBroadbandData::pack(int seq_number) const {
@@ -10,7 +10,7 @@ std::vector<ByteArray> ElectricalBroadbandData::pack(int seq_number) const {
 
   for (const auto& channel : channels) {
     NDTPHeader header;
-    header.version = kNDTPVersion;
+    header.version = NDTP_VERSION;
     header.data_type = synapse::DataType::kBroadband;
     header.timestamp = t0;
     header.seq_number = seq_number + seq_number_offset;
@@ -50,12 +50,12 @@ ElectricalBroadbandData ElectricalBroadbandData::unpack(const NDTPMessage& msg) 
   return data;
 }
 
-// Implementation of SpiketrainData
-std::vector<ByteArray> SpiketrainData::pack(int seq_number) const {
+// Implementation of BinnedSpiketrainData
+std::vector<ByteArray> BinnedSpiketrainData::pack(int seq_number) const {
   std::vector<ByteArray> packets;
 
   NDTPHeader header;
-  header.version = kNDTPVersion;
+  header.version = NDTP_VERSION;
   header.data_type = synapse::DataType::kSpiketrain;
   header.timestamp = 0;  // Assign appropriate timestamp
   header.seq_number = seq_number;
@@ -72,10 +72,10 @@ std::vector<ByteArray> SpiketrainData::pack(int seq_number) const {
   return packets;
 }
 
-SpiketrainData SpiketrainData::unpack(const NDTPMessage& msg) {
-  SpiketrainData data;
+BinnedSpiketrainData BinnedSpiketrainData::unpack(const NDTPMessage& msg) {
+  BinnedSpiketrainData data;
   data.spike_counts = std::get<NDTPPayloadSpiketrain>(msg.payload).spike_counts;
   return data;
 }
 
-}  // namespace libndtp
+}  // namespace science::libndtp

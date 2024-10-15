@@ -1,25 +1,29 @@
 cmake_minimum_required(VERSION 3.23.5)
 
+SET(VCPKG_MANIFEST_FEATURES  "" CACHE STRING "vcpkg features")
+
 project(libndtp VERSION 0.0.1)
+
+set(TARGET_NAME "science-${PROJECT_NAME}")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
-find_package(gRPC CONFIG REQUIRED)
 find_package(Protobuf REQUIRED CONFIG)
-# find_package(science-scipp REQUIRED CONFIG)
-# find_package(pybind11 REQUIRED CONFIG)
 
 add_library(${PROJECT_NAME})
 
-configure_file(include/science/libndtp/version.hpp.in ${CMAKE_BINARY_DIR}/include/science/libndtp/version.hpp @ONLY)
+configure_file(include/science/libndtp/version.h.in ${CMAKE_BINARY_DIR}/include/science/libndtp/version.h @ONLY)
 
 get_filename_component(PROTO_INCLUDE_DIR external/sciencecorp/synapse-api REALPATH)
 set(PROTO_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/sciencecorp/synapse-api")
 set(PROTO_OUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/science/synapse")
 file(MAKE_DIRECTORY ${PROTO_OUT_DIR})
 file(GLOB_RECURSE PROTOS ${PROTO_INCLUDE_DIR}/api/*.proto)
+
+message(STATUS "PROTO_INCLUDE_DIR: ${PROTO_INCLUDE_DIR}")
 
 protobuf_generate(
   TARGET ${PROJECT_NAME}
@@ -30,24 +34,11 @@ protobuf_generate(
   OUT_VAR PROTO_SOURCES
 )
 
-protobuf_generate(
-  TARGET ${PROJECT_NAME}
-  LANGUAGE grpc
-  IMPORT_DIRS ${PROTO_INCLUDE_DIR}
-  PROTOS ${PROTO_INCLUDE_DIR}/api/synapse.proto
-  GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
-  PLUGIN protoc-gen-grpc=$<TARGET_FILE:gRPC::grpc_cpp_plugin>
-  PROTOC_OUT_DIR ${PROTO_OUT_DIR}
-  OUT_VAR GRPC_SOURCES
-)
-
 file(GLOB_RECURSE SOURCES src/science/libndtp/*.cpp)
 target_sources(
   ${PROJECT_NAME}
   PRIVATE
   ${SOURCES}
-  ${PROTO_SOURCES}
-  ${GRPC_SOURCES}
 )
 
 target_include_directories(
@@ -56,22 +47,17 @@ target_include_directories(
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/science/synapse>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
   $<INSTALL_INTERFACE:include>
   $<INSTALL_INTERFACE:include/science/synapse>
-  PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_link_libraries(
   ${PROJECT_NAME}
   PRIVATE
-  gRPC::grpc++
   protobuf::libprotobuf
 )
 
 include(GNUInstallDirs)
-
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}Targets
@@ -87,6 +73,7 @@ install(
   FILES_MATCHING PATTERN "*.h"
 )
 
+# Export targets
 install(
   EXPORT ${PROJECT_NAME}Targets
   FILE ${PROJECT_NAME}Targets.cmake
@@ -97,12 +84,13 @@ install(
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in
-  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
   INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 
 install(
-  FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+  FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 

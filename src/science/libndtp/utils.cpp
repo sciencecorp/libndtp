@@ -1,15 +1,15 @@
-// src/Utilities.cpp
-#include "science/libndtp/utils.hpp"
+#include "science/libndtp/utils.h"
 #include <cmath>
+#include <string>
 
-namespace libndtp {
+namespace science::libndtp {
 
 std::pair<ByteArray, BitOffset> to_bytes(
-    const std::vector<int>& values, int bit_width, const ByteArray& existing, int writing_bit_offset, bool signed_val,
-    bool byteorder_is_little
+    const std::vector<int>& values, uint8_t bit_width, const ByteArray& existing, int writing_bit_offset, bool signed_val,
+    bool le
 ) {
   if (bit_width <= 0) {
-    throw std::invalid_argument("bit width must be > 0");
+    throw std::invalid_argument("to unpack bytes, bit width must be > 0 (value: " + std::to_string(bit_width) + ")");
   }
 
   int truncate_bytes = writing_bit_offset / 8;
@@ -61,7 +61,7 @@ std::pair<ByteArray, BitOffset> to_bytes(
       int shift = remaining_bits - bits_to_write;
       int bits_add = (val >> shift) & ((1 << bits_to_write) - 1);
 
-      if (byteorder_is_little) {
+      if (le) {
         current_byte |= bits_add << bits_in_current_byte;
       } else {
         current_byte |= bits_add << (available_bits - bits_to_write);
@@ -91,10 +91,10 @@ std::pair<ByteArray, BitOffset> to_bytes(
 }
 
 std::tuple<std::vector<int>, BitOffset, ByteArray> to_ints(
-    const ByteArray& data, int bit_width, int count, int start_bit, bool signed_val, bool byteorder_is_little
+    const ByteArray& data, uint8_t bit_width, int count, int start_bit, bool signed_val, bool le
 ) {
   if (bit_width <= 0) {
-    throw std::invalid_argument("bit width must be > 0");
+    throw std::invalid_argument("to unpack ints, bit width must be > 0 (value: " + std::to_string(bit_width) + ")");
   }
 
   int truncate_bytes = start_bit / 8;
@@ -165,4 +165,4 @@ std::tuple<std::vector<int>, BitOffset, ByteArray> to_ints(
   return {values, end_bit, truncated_data};
 }
 
-}  // namespace libndtp
+}  // namespace science::libndtp

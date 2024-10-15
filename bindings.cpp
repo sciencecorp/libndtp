@@ -1,11 +1,11 @@
 // bindings.cpp
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include "libndtp/Ndtp.hpp"
-#include "libndtp/Types.hpp"
+#include "libndtp/ndtp.h"
+#include "libndtp/types.h"
 
 namespace py = pybind11;
-using namespace libndtp;
+using namespace science::libndtp;
 
 PYBIND11_MODULE(libndtp, m) {
     m.doc() = "libndtp C++ extension for NDTP with Python bindings";
@@ -65,12 +65,12 @@ PYBIND11_MODULE(libndtp, m) {
         .def("pack", &ElectricalBroadbandData::pack, py::arg("seq_number"))
         .def_static("unpack", &ElectricalBroadbandData::unpack, py::arg("msg"));
 
-    // Bind SpiketrainData
-    py::class_<SpiketrainData>(m, "SpiketrainData")
+    // Bind BinnedSpiketrainData
+    py::class_<BinnedSpiketrainData>(m, "BinnedSpiketrainData")
         .def(py::init<>())
-        .def_readwrite("spike_counts", &SpiketrainData::spike_counts)
-        .def("pack", &SpiketrainData::pack, py::arg("seq_number"))
-        .def_static("unpack", &SpiketrainData::unpack, py::arg("msg"));
+        .def_readwrite("spike_counts", &BinnedSpiketrainData::spike_counts)
+        .def("pack", &BinnedSpiketrainData::pack, py::arg("seq_number"))
+        .def_static("unpack", &BinnedSpiketrainData::unpack, py::arg("msg"));
 
     // Bind SynapseData using std::variant
     // Currently, Pybind11 doesn't support std::variant directly.
