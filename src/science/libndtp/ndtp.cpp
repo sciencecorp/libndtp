@@ -218,7 +218,7 @@ NDTPPayloadSpiketrain NDTPPayloadSpiketrain::unpack(const ByteArray& data) {
   };
 }
 
-ByteArray NDTPMessage::pack() const {
+ByteArray NDTPMessage::pack() {
   auto result = header.pack();
 
   if (std::holds_alternative<NDTPPayloadBroadband>(payload)) {
@@ -233,9 +233,9 @@ ByteArray NDTPMessage::pack() const {
     throw std::runtime_error("Unsupported payload type");
   }
 
-  uint16_t crc = crc16(result);
-  result.push_back((crc >> 8) & 0xFF);
-  result.push_back(crc & 0xFF);
+  _crc16 = crc16(result);
+  result.push_back((_crc16 >> 8) & 0xFF);
+  result.push_back(_crc16 & 0xFF);
 
   return result;
 }
@@ -260,10 +260,10 @@ NDTPMessage NDTPMessage::unpack(const ByteArray& data) {
   auto header = NDTPHeader::unpack(header_bytes);
   if (header.data_type == synapse::DataType::kBroadband) {
     auto unpacked_payload = NDTPPayloadBroadband::unpack(payload_bytes);
-    return NDTPMessage{.header = header, .payload = unpacked_payload};
+    return NDTPMessage{ .header = header, .payload = unpacked_payload, ._crc16 = received_crc };
   } else if (header.data_type == synapse::DataType::kSpiketrain) {
     auto unpacked_payload = NDTPPayloadSpiketrain::unpack(payload_bytes);
-    return NDTPMessage{.header = header, .payload = unpacked_payload};
+    return NDTPMessage{ .header = header, .payload = unpacked_payload, ._crc16 = received_crc };
   }
 
   throw std::runtime_error("unsupported data type in NDTP header");

@@ -4,6 +4,17 @@
 
 namespace science::libndtp {
 
+std::string to_hexstring(const std::vector<uint8_t>& data) {
+  std::stringstream ss;
+  for (unsigned int i = 0; i < data.size(); i++) {
+    ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(data[i]);
+    if (i < data.size() - 1) {
+      ss << " ";
+    }
+  }
+  return ss.str();
+}
+
 TEST(NDTPTest, NDTPHeaderPackUnpack) {
   NDTPHeader header{.data_type = synapse::DataType::kBroadband, .timestamp = 1234567890, .seq_number = 42};
   auto packed = header.pack();
@@ -132,7 +143,7 @@ TEST(NDTPTest, NDTPPayloadSpiketrainPackUnpack) {
   EXPECT_EQ(unpacked.bin_size_ms, 1);
 }
 
-TEST(NDTPTest, NDTPMessagePackUnpack) {
+TEST(NDTPTest, NDTPMessageBroadbandPackUnpack) {
   uint8_t bit_width = 12;
   uint16_t sample_rate = 3;
   bool is_signed = false;
@@ -152,11 +163,11 @@ TEST(NDTPTest, NDTPMessagePackUnpack) {
       },
       NDTPPayloadBroadband::ChannelData {
         .channel_id = 1,
-        .channel_data = {0, 1}
+        .channel_data = {0, 1000}
       },
       NDTPPayloadBroadband::ChannelData {
         .channel_id = 2,
-        .channel_data = {0, 1, 2}
+        .channel_data = {0, 1000, 2000}
       }
     }
   };
@@ -168,6 +179,12 @@ TEST(NDTPTest, NDTPMessagePackUnpack) {
   auto b = std::get<NDTPPayloadBroadband>(message.payload);
 
   auto packed = message.pack();
+  EXPECT_EQ(message._crc16, 23793);
+
+  EXPECT_EQ(
+    to_hexstring(packed),
+    "01 02 00 00 00 00 49 96 02 d2 00 2a 18 00 00 03 00 00 03 00 00 00 00 01 00 00 00 00 10 00 20 00 3e 80 00 00 20 00 30 00 3e 87 d0 5c f1"
+  );
 
   EXPECT_EQ(packed[0], 0x01);
   EXPECT_EQ(packed[1], static_cast<uint8_t>(synapse::DataType::kBroadband));
@@ -181,59 +198,130 @@ TEST(NDTPTest, NDTPMessagePackUnpack) {
   EXPECT_EQ(packed[9], 0xD2);
 
   uint16_t crc = (packed[packed.size() - 2] << 8) | packed[packed.size() - 1];
-  EXPECT_EQ(crc, 36210);
+  EXPECT_EQ(crc, 23793);
 
   auto unpacked = NDTPMessage::unpack(packed);
   EXPECT_EQ(unpacked.header, header) << "header is not equal to unpacked header";
   EXPECT_EQ(std::get<NDTPPayloadBroadband>(unpacked.payload), payload) << "payload is not equal to unpacked payload";
+  EXPECT_EQ(unpacked._crc16, 23793);
 
-  NDTPHeader header2 {
+  auto unpacked_payload = std::get<NDTPPayloadBroadband>(unpacked.payload);
+  EXPECT_EQ(unpacked_payload.channels.size(), payload.channels.size());
+  EXPECT_EQ(unpacked_payload.channels[0].channel_id, payload.channels[0].channel_id);
+  EXPECT_EQ(unpacked_payload.channels[0].channel_data, payload.channels[0].channel_data);
+  EXPECT_EQ(unpacked_payload.channels[1].channel_id, payload.channels[1].channel_id);
+  EXPECT_EQ(unpacked_payload.channels[1].channel_data, payload.channels[1].channel_data);
+  EXPECT_EQ(unpacked_payload.channels[2].channel_id, payload.channels[2].channel_id);
+  EXPECT_EQ(unpacked_payload.channels[2].channel_data, payload.channels[2].channel_data);
+}
+
+TEST(NDTPTest, NDTPMessageBroadbandPackUnpackLarge) {
+  uint8_t bit_width = 16;
+  uint32_t sample_rate = 36000;
+  bool is_signed = false;
+  std::vector<uint64_t> samples;
+  for (int i = 0; i < 10000; i++) {
+    samples.push_back(i);
+  }
+
+  std::vector<NDTPPayloadBroadband::ChannelData> channels;
+  for (uint32_t c = 0; c < 20; c++) {
+    channels.emplace_back(NDTPPayloadBroadband::ChannelData{
+      .channel_id = c,
+      .channel_data = samples
+    });
+  }
+
+  NDTPHeader header {
+    .data_type = synapse::DataType::kBroadband,
+    .timestamp = 1234567890,
+    .seq_number = 42
+  };
+  NDTPPayloadBroadband payload {
+    .is_signed = is_signed,
+    .bit_width = bit_width,
+    .sample_rate = sample_rate,
+    .channels = channels
+  };
+  NDTPMessage message {
+    .header = header,
+    .payload = payload
+  };
+
+  auto b = std::get<NDTPPayloadBroadband>(message.payload);
+
+  auto packed = message.pack();
+  EXPECT_EQ(message._crc16, 45907);
+
+  uint16_t crc = (packed[packed.size() - 2] << 8) | packed[packed.size() - 1];
+  EXPECT_EQ(crc, 45907);
+
+  auto unpacked = NDTPMessage::unpack(packed);
+  EXPECT_EQ(unpacked.header, header) << "header is not equal to unpacked header";
+  EXPECT_EQ(std::get<NDTPPayloadBroadband>(unpacked.payload), payload) << "payload is not equal to unpacked payload";
+  EXPECT_EQ(unpacked._crc16, 45907);
+
+  auto unpacked_payload = std::get<NDTPPayloadBroadband>(unpacked.payload);
+  EXPECT_EQ(unpacked_payload.channels.size(), payload.channels.size());
+  EXPECT_EQ(unpacked_payload.channels[0].channel_id, payload.channels[0].channel_id);
+  EXPECT_EQ(unpacked_payload.channels[0].channel_data, payload.channels[0].channel_data);
+  EXPECT_EQ(unpacked_payload.channels[1].channel_id, payload.channels[1].channel_id);
+  EXPECT_EQ(unpacked_payload.channels[1].channel_data, payload.channels[1].channel_data);
+  EXPECT_EQ(unpacked_payload.channels[2].channel_id, payload.channels[2].channel_id);
+  EXPECT_EQ(unpacked_payload.channels[2].channel_data, payload.channels[2].channel_data);
+}
+
+TEST(NDTPTest, NDTPMessageSpiketrainPackUnpack) {
+  NDTPHeader header {
     .data_type = synapse::DataType::kSpiketrain,
     .timestamp = 1234567890,
     .seq_number = 42
   };
-  NDTPPayloadSpiketrain payload2 {
+  NDTPPayloadSpiketrain payload {
     .bin_size_ms = 1,
     .spike_counts = std::vector<uint8_t>{1, 2, 3, 2, 1}
   };
-  NDTPMessage message2 {
-    .header = header2,
-    .payload = payload2
+  NDTPMessage message {
+    .header = header,
+    .payload = payload
   };
-  auto packed2 = message2.pack();
+  auto packed = message.pack();
 
-  EXPECT_EQ(packed2[0], 0x01);
-  EXPECT_EQ(packed2[1], static_cast<uint8_t>(synapse::DataType::kSpiketrain));
-  EXPECT_EQ(packed2[2], 0);
-  EXPECT_EQ(packed2[3], 0);
-  EXPECT_EQ(packed2[4], 0);
-  EXPECT_EQ(packed2[5], 0);
-  EXPECT_EQ(packed2[6], 0x49);
-  EXPECT_EQ(packed2[7], 0x96);
-  EXPECT_EQ(packed2[8], 0x02);
-  EXPECT_EQ(packed2[9], 0xD2);
+  EXPECT_EQ(packed[0], 0x01);
+  EXPECT_EQ(packed[1], static_cast<uint8_t>(synapse::DataType::kSpiketrain));
+  EXPECT_EQ(packed[2], 0);
+  EXPECT_EQ(packed[3], 0);
+  EXPECT_EQ(packed[4], 0);
+  EXPECT_EQ(packed[5], 0);
+  EXPECT_EQ(packed[6], 0x49);
+  EXPECT_EQ(packed[7], 0x96);
+  EXPECT_EQ(packed[8], 0x02);
+  EXPECT_EQ(packed[9], 0xD2);
 
   // Sample count
-  EXPECT_EQ(packed2[12], 0x00);
-  EXPECT_EQ(packed2[13], 0x00);
-  EXPECT_EQ(packed2[14], 0x00);
-  EXPECT_EQ(packed2[15], 0x05);
+  EXPECT_EQ(packed[12], 0x00);
+  EXPECT_EQ(packed[13], 0x00);
+  EXPECT_EQ(packed[14], 0x00);
+  EXPECT_EQ(packed[15], 0x05);
 
   // Bin size
-  EXPECT_EQ(packed2[16], 0x01);
+  EXPECT_EQ(packed[16], 0x01);
 
   // Spike counts
-  EXPECT_EQ(packed2[17], 0x6e);  // 1,2,3,2 -> 01101110 -> 0x6E
-  EXPECT_EQ(packed2[18], 0x40);  // 1 -> 01000000 -> 0x40
+  EXPECT_EQ(packed[17], 0x6e);  // 1,2,3,2 -> 01101110 -> 0x6E
+  EXPECT_EQ(packed[18], 0x40);  // 1 -> 01000000 -> 0x40
 
-  uint16_t crc2 = (packed2[packed2.size() - 2] << 8) | packed2[packed2.size() - 1];
-  EXPECT_EQ(crc2, 46076);
+  uint16_t crc = (packed[packed.size() - 2] << 8) | packed[packed.size() - 1];
+  EXPECT_EQ(crc, 46076);
 
-  auto unpacked2 = NDTPMessage::unpack(packed2);
+  auto unpacked = NDTPMessage::unpack(packed);
 
-  EXPECT_EQ(unpacked2.header, header2) << "header2 is not equal to unpacked2.header";
+  EXPECT_EQ(unpacked.header, header) << "header is not equal to unpacked.header";
 
-  EXPECT_EQ(std::get<NDTPPayloadSpiketrain>(unpacked2.payload), payload2) << "payload2 is not equal to unpacked2.payload";
+  EXPECT_EQ(
+    std::get<NDTPPayloadSpiketrain>(unpacked.payload),
+    payload
+  ) << "payload is not equal to unpacked.payload";
 }
 
 }  // namespace science::libndtp
