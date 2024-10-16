@@ -3,30 +3,53 @@
 
 namespace science::libndtp {
 
-// Implementation of ElectricalBroadbandData
+static constexpr size_t MAX_CH_PAYLOAD_SIZE_BYTES = 1400;
+
+void chunk_channel_data(
+  const std::vector<uint64_t>& ch_data,
+  size_t max_payload_size_bytes,
+  std::vector<std::vector<uint64_t>>* chunks
+) {
+  size_t n_packets = std::ceil(ch_data.size() / max_payload_size_bytes);
+  size_t n_pts_per_packet = std::ceil(ch_data.size() / n_packets);
+  for (size_t i = 0; i < n_packets; ++i) {
+    size_t start_idx = i * n_pts_per_packet;
+    size_t end_idx = std::min(start_idx + n_pts_per_packet, ch_data.size());
+    chunks->push_back(std::vector<uint64_t>(ch_data.begin() + start_idx, ch_data.begin() + end_idx));
+  }
+}
+
 std::vector<ByteArray> ElectricalBroadbandData::pack(uint64_t seq_number) const {
   std::vector<ByteArray> packets;
   int seq_number_offset = 0;
 
   for (const auto& channel : channels) {
-    NDTPHeader header;
-    header.version = NDTP_VERSION;
-    header.data_type = synapse::DataType::kBroadband;
-    header.timestamp = t0;
-    header.seq_number = seq_number + seq_number_offset;
+    std::vector<std::vector<uint64_t>> chunked;
+    chunk_channel_data(channel.channel_data, MAX_CH_PAYLOAD_SIZE_BYTES, &chunked);
 
-    NDTPPayloadBroadband payload;
-    payload.is_signed = is_signed;
-    payload.bit_width = bit_width;
-    payload.sample_rate = sample_rate;
-    payload.channels.push_back({.channel_id = channel.channel_id, .channel_data = channel.channel_data});
+    for (const auto& chunk : chunked) {
+      NDTPHeader header;
+      header.version = NDTP_VERSION;
+      header.data_type = synapse::DataType::kBroadband;
+      header.timestamp = t0;
+      header.seq_number = seq_number + seq_number_offset;
 
-    NDTPMessage message;
-    message.header = header;
-    message.payload = payload;
+      NDTPPayloadBroadband payload;
+      payload.is_signed = is_signed;
+      payload.bit_width = bit_width;
+      payload.sample_rate = sample_rate;
+      payload.channels.push_back({
+        .channel_id = channel.channel_id,
+        .channel_data = channel.channel_data
+      });
 
-    packets.push_back(message.pack());
-    seq_number_offset += 1;
+      NDTPMessage message;
+      message.header = header;
+      message.payload = payload;
+
+      packets.push_back(message.pack());
+      seq_number_offset += 1;
+    }
   }
 
   return packets;
