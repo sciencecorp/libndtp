@@ -76,14 +76,15 @@ ByteArray NDTPPayloadBroadband::pack() const {
   // First byte: bit width and signed flag
   payload.push_back(((bit_width & 0x7F) << 1) | (is_signed ? 1 : 0));
 
-  // Next three bytes: number of channels (3 bytes) (big endian)
+  // Next three bytes: number of channels
   uint32_t n_channels = channels.size();
   payload.push_back((n_channels >> 16) & 0xFF);
   payload.push_back((n_channels >> 8) & 0xFF);
   payload.push_back((n_channels) & 0xFF);
 
-  // Next two bytes: sample rate (2 bytes)
-  uint16_t n_sample_rate = sample_rate;
+  // Next three bytes: sample rate
+  uint32_t n_sample_rate = sample_rate;
+  payload.push_back((n_sample_rate >> 16) & 0xFF);
   payload.push_back((n_sample_rate >> 8) & 0xFF);
   payload.push_back(n_sample_rate & 0xFF);
 
@@ -111,16 +112,16 @@ ByteArray NDTPPayloadBroadband::pack() const {
 }
 
 NDTPPayloadBroadband NDTPPayloadBroadband::unpack(const ByteArray& data) {
-  if (data.size() < 6) {
+  if (data.size() < 7) {
     throw std::runtime_error("Invalid data size for NDTPPayloadBroadband");
   }
   uint8_t bit_width = data[0] >> 1;
   bool is_signed = (data[0] & 1) == 1;
   uint32_t num_channels = (data[1] << 16) | (data[2] << 8) | (data[3]);
-  uint16_t sample_rate = (data[4] << 8) | data[5];
+  uint32_t sample_rate = (data[4] << 16) | (data[5] << 8) | (data[6]);
 
   BitOffset offset = 0;
-  ByteArray truncated = std::vector<uint8_t>(data.begin() + 6, data.end());
+  ByteArray truncated = std::vector<uint8_t>(data.begin() + 7, data.end());
   std::vector<NDTPPayloadBroadband::ChannelData> channels;
   for (uint32_t i = 0; i < num_channels; ++i) {
     auto u_channel_id = to_ints<uint32_t>(truncated, 24, 1, offset);

@@ -73,34 +73,35 @@ TEST(NDTPTest, NDTPPayloadBroadbandPackUnpack) {
 
   // Sample Rate
   EXPECT_EQ(packed[4], 0x00);
-  EXPECT_EQ(packed[5], 0x03);
+  EXPECT_EQ(packed[5], 0x00);
+  EXPECT_EQ(packed[6], 0x03);
 
   // channel_id, 0 (24 bits, 3 bytes)
-  EXPECT_EQ(packed[6], 0x00);
   EXPECT_EQ(packed[7], 0x00);
   EXPECT_EQ(packed[8], 0x00);
+  EXPECT_EQ(packed[9], 0x00);
 
   // ch 0 num_samples, 3 (16 bits, 2 bytes)
-  EXPECT_EQ(packed[9], 0x00);
-  EXPECT_EQ(packed[10], 0x03);
+  EXPECT_EQ(packed[10], 0x00);
+  EXPECT_EQ(packed[11], 0x03);
 
   // ch 0 channel_data, 1, 2, 3 (12 bits, 1.5 bytes each)
-  EXPECT_EQ(packed[11], 0x00);
-  EXPECT_EQ(packed[12], 0x10);
-  EXPECT_EQ(packed[13], 0x02);
-  EXPECT_EQ(packed[14], 0x00);
-  EXPECT_GE(packed[15], 0x03);
+  EXPECT_EQ(packed[12], 0x00);
+  EXPECT_EQ(packed[13], 0x10);
+  EXPECT_EQ(packed[14], 0x02);
+  EXPECT_EQ(packed[15], 0x00);
+  EXPECT_GE(packed[16], 0x03);
 
   // channel_id, 1 (24 bits, 3 bytes)
-  EXPECT_EQ(packed[15], 0x30);
-  EXPECT_EQ(packed[16], 0x00);
+  EXPECT_EQ(packed[16], 0x30);
   EXPECT_EQ(packed[17], 0x00);
-  EXPECT_GE(packed[18], 0x10);
+  EXPECT_EQ(packed[18], 0x00);
+  EXPECT_GE(packed[19], 0x10);
 
   // ch 1 num_samples, 3 (16 bits, 2 bytes)
-  EXPECT_EQ(packed[18], 0x10);
-  EXPECT_EQ(packed[19], 0x00);
-  EXPECT_GE(packed[20], 0x30);
+  EXPECT_EQ(packed[19], 0x10);
+  EXPECT_EQ(packed[20], 0x00);
+  EXPECT_GE(packed[21], 0x30);
 
   auto unpacked = NDTPPayloadBroadband::unpack(packed);
   EXPECT_EQ(unpacked.bit_width, bit_width);
@@ -180,7 +181,7 @@ TEST(NDTPTest, NDTPMessagePackUnpack) {
   EXPECT_EQ(packed[9], 0xD2);
 
   uint16_t crc = (packed[packed.size() - 2] << 8) | packed[packed.size() - 1];
-  EXPECT_EQ(crc, 24287);
+  EXPECT_EQ(crc, 36210);
 
   auto unpacked = NDTPMessage::unpack(packed);
   EXPECT_EQ(unpacked.header, header) << "header is not equal to unpacked header";

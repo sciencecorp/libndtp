@@ -51,7 +51,7 @@ struct NDTPPayloadBroadband {
   bool is_signed;        // 1 bit
   uint8_t bit_width;     // 7 bits (combined with is_signed to form 8 bits)
   uint32_t ch_count;     // 3 bytes
-  uint16_t sample_rate;  // 2 bytes
+  uint32_t sample_rate;  // 2 bytes
   std::vector<ChannelData> channels;
 
   ByteArray pack() const;
