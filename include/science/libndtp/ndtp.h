@@ -83,7 +83,10 @@ struct NDTPPayloadSpiketrain {
   ByteArray pack() const;
   static NDTPPayloadSpiketrain unpack(const ByteArray& data);
 
-  bool operator==(const NDTPPayloadSpiketrain& other) const { return spike_counts == other.spike_counts; }
+  bool operator==(const NDTPPayloadSpiketrain& other) const {
+    return spike_counts == other.spike_counts &&
+            bin_size_ms == other.bin_size_ms;
+  }
   bool operator!=(const NDTPPayloadSpiketrain& other) const { return !(*this == other); }
 };
 
@@ -101,9 +104,6 @@ struct NDTPMessage {
   static NDTPMessage unpack(const ByteArray& data);
 
  private:
-  // Calculates CRC16 checksum.
-  static uint16_t crc16(const ByteArray& data, uint16_t poly = 0x8005, uint16_t init = 0xFFFF);
-
   // Verifies CRC16 checksum.
   static bool crc16_verify(const ByteArray& data, uint16_t crc);
 };

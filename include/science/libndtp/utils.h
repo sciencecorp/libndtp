@@ -12,6 +12,22 @@ namespace science::libndtp {
 using ByteArray = std::vector<uint8_t>;
 using BitOffset = size_t;
 
+inline uint16_t crc16(const ByteArray& data, uint16_t poly = 0x8005, uint16_t init = 0xFFFF) {
+  uint16_t crc = init;
+  for (const auto& byte : data) {
+    crc ^= byte << 8;
+    for (int i = 0; i < 8; ++i) {
+      if (crc & 0x8000) {
+        crc = (crc << 1) ^ poly;
+      } else {
+        crc <<= 1;
+      }
+      crc &= 0xFFFF;
+    }
+  }
+  return crc & 0xFFFF;
+}
+
 /**
  * Packs a list of integers into a byte array with the specified bit width.
  * Handles both signed and unsigned integers.
@@ -103,7 +119,7 @@ std::pair<ByteArray, BitOffset> to_bytes(
     result.push_back(current_byte);
   }
 
-  return {result, bits_in_current_byte};
+  return { result, bits_in_current_byte };
 }
 
 
@@ -186,7 +202,7 @@ std::tuple<std::vector<T>, BitOffset, ByteArray> to_ints(
   }
 
   end_bit += total_bits_read;
-  return {values, end_bit, truncated_data};
+  return { values, end_bit, truncated_data};
 }
 
 }  // namespace science::libndtp

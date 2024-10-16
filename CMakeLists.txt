@@ -110,12 +110,6 @@ if ("tests" IN_LIST VCPKG_MANIFEST_FEATURES)
     GTest::Main
   )
 
-  target_include_directories(${PROJECT_NAME}_tests
-    PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/test
-  )
-
   include(GoogleTest)
   gtest_discover_tests(${PROJECT_NAME}_tests)
 endif()

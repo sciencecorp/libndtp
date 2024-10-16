@@ -77,43 +77,34 @@ ByteArray NDTPPayloadBroadband::pack() const {
   payload.push_back(((bit_width & 0x7F) << 1) | (is_signed ? 1 : 0));
 
   // Next three bytes: number of channels (3 bytes) (big endian)
-  uint32_t n_channels = htonl(channels.size());
-
-  payload.push_back((n_channels >> 24) & 0xFF);
+  uint32_t n_channels = channels.size();
   payload.push_back((n_channels >> 16) & 0xFF);
   payload.push_back((n_channels >> 8) & 0xFF);
+  payload.push_back((n_channels) & 0xFF);
 
   // Next two bytes: sample rate (2 bytes)
-  uint16_t n_sample_rate = htons(sample_rate);
+  uint16_t n_sample_rate = sample_rate;
   payload.push_back((n_sample_rate >> 8) & 0xFF);
   payload.push_back(n_sample_rate & 0xFF);
 
+  size_t bit_offset = 0;
   for (const auto& c : channels) {
-    uint32_t n_channel_id = htonl(c.channel_id);
-
-    // Pack channel_id (3 bytes)
-    payload.push_back((n_channel_id >> 24) & 0xFF);
-    payload.push_back((n_channel_id >> 16) & 0xFF);
-    payload.push_back((n_channel_id >> 8) & 0xFF);
-
-    // Pack number of samples (2 bytes)
-    uint16_t num_samples = c.channel_data.size();
-    uint16_t n_num_samples = htons(num_samples);
-    payload.push_back((n_num_samples >> 8) & 0xFF);
-    payload.push_back(n_num_samples & 0xFF);
-
-    // Pack channel_data
-    if (is_signed) {
-      std::vector<int64_t> channel_data = to_signed(c.channel_data);
-
-      auto res = to_bytes<int64_t>(channel_data, bit_width);
-      auto channel_data_bytes = std::get<0>(res);
-      payload.insert(payload.end(), channel_data_bytes.begin(), channel_data_bytes.end());
-    } else {
-      auto res = to_bytes<uint64_t>(c.channel_data, bit_width);
-      auto channel_data_bytes = std::get<0>(res);
-      payload.insert(payload.end(), channel_data_bytes.begin(), channel_data_bytes.end());
+    size_t num_samples = c.channel_data.size();
+    if (num_samples > 0xFFFF) {
+      throw std::runtime_error("number of samples is too large, must be less than 65536");
     }
+
+    auto p_cid = to_bytes<uint32_t>({c.channel_id}, 24, payload, bit_offset);
+    payload = std::get<0>(p_cid);
+    bit_offset = std::get<1>(p_cid);
+
+    auto p_num_samples = to_bytes<uint16_t>({static_cast<uint16_t>(num_samples)}, 16, payload, bit_offset);
+    payload = std::get<0>(p_num_samples);
+    bit_offset = std::get<1>(p_num_samples);
+
+    auto p_channel_data = to_bytes<uint64_t>(c.channel_data, bit_width, payload, bit_offset, is_signed);
+    payload = std::get<0>(p_channel_data);
+    bit_offset = std::get<1>(p_channel_data);
   }
 
   return payload;
@@ -125,42 +116,27 @@ NDTPPayloadBroadband NDTPPayloadBroadband::unpack(const ByteArray& data) {
   }
   uint8_t bit_width = data[0] >> 1;
   bool is_signed = (data[0] & 1) == 1;
-  uint32_t num_channels = ntohl((data[1] << 24) | (data[2] << 16) | data[3] << 8);
+  uint32_t num_channels = (data[1] << 16) | (data[2] << 8) | (data[3]);
   uint16_t sample_rate = (data[4] << 8) | data[5];
 
-  BitOffset offset = 6;
-
+  BitOffset offset = 0;
+  ByteArray truncated = std::vector<uint8_t>(data.begin() + 6, data.end());
   std::vector<NDTPPayloadBroadband::ChannelData> channels;
   for (uint32_t i = 0; i < num_channels; ++i) {
-    if (offset + 3 > data.size()) {
-      throw std::runtime_error("Incomplete data for channel_id");
-    }
-    // unpack channel_id (3 bytes)
-    uint32_t channel_id = ntohl((data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8));
-    offset += 3;
+    auto u_channel_id = to_ints<uint32_t>(truncated, 24, 1, offset);
+    uint32_t channel_id = std::get<0>(u_channel_id)[0];
+    offset = std::get<1>(u_channel_id);
+    truncated = std::get<2>(u_channel_id);
 
-    // unpack num_samples (2 bytes)
-    uint16_t num_samples = ntohs((data[offset] << 8) | data[offset + 1]);
-    offset += 2;
+    auto u_num_samples = to_ints<uint16_t>(truncated, 16, 1, offset);
+    uint16_t num_samples = std::get<0>(u_num_samples)[0];
+    offset = std::get<1>(u_num_samples);
+    truncated = std::get<2>(u_num_samples);
 
-    uint32_t num_bytes = (num_samples * bit_width + 7) / 8;
-
-    if (offset + num_bytes > data.size()) {
-      throw std::runtime_error("Incomplete data for channel_data");
-    }
-    std::vector<uint8_t> channel_data_bytes(data.begin() + offset, data.begin() + offset + num_bytes);
-    offset += num_bytes;
-
-    // unpack channel_data
-    std::vector<uint64_t> channel_data;
-    if (is_signed) {
-      auto res = to_ints<int64_t>(channel_data_bytes, bit_width, num_samples, 0, is_signed);
-      auto channel_data_signed = std::get<0>(res);
-      channel_data = to_unsigned(channel_data_signed);
-    } else {
-      auto res = to_ints<uint64_t>(channel_data_bytes, bit_width, num_samples, 0, is_signed);
-      channel_data = std::get<0>(res);
-    }
+    auto u_channel_data = to_ints<uint64_t>(truncated, bit_width, num_samples, offset, is_signed);
+    std::vector<uint64_t> channel_data = std::get<0>(u_channel_data);
+    offset = std::get<1>(u_channel_data);
+    truncated = std::get<2>(u_channel_data);
 
     channels.emplace_back(NDTPPayloadBroadband::ChannelData{
       .channel_id = channel_id,
@@ -171,8 +147,8 @@ NDTPPayloadBroadband NDTPPayloadBroadband::unpack(const ByteArray& data) {
   return NDTPPayloadBroadband{
       .is_signed = is_signed,
       .bit_width = bit_width,
-      .ch_count = ntohl(num_channels),
-      .sample_rate = ntohs(sample_rate),
+      .ch_count = num_channels,
+      .sample_rate = sample_rate,
       .channels = channels
   };
 }
@@ -191,7 +167,7 @@ ByteArray NDTPPayloadSpiketrain::pack() const {
   ByteArray result;  // Start with 4 bytes for sample_count
 
   // Pack sample_count (4 bytes)
-  uint32_t n_num_counts = htonl(sample_count);
+  uint32_t n_num_counts = sample_count;
   result.push_back((n_num_counts >> 24) & 0xFF);
   result.push_back((n_num_counts >> 16) & 0xFF);
   result.push_back((n_num_counts >> 8) & 0xFF);
@@ -208,13 +184,12 @@ ByteArray NDTPPayloadSpiketrain::pack() const {
 }
 
 NDTPPayloadSpiketrain NDTPPayloadSpiketrain::unpack(const ByteArray& data) {
-  if (data.size() < 4) {
+  if (data.size() < 5) {
     throw std::runtime_error("Invalid data size for NDTPPayloadSpiketrain");
   }
 
   // unpack sample_count (4 bytes)
-  uint32_t sample_count = ntohl(data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3]);
-  std::cout << "expecting " << sample_count << " samples" << std::endl;
+  uint32_t sample_count = data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];
 
   // unpack bin_size_ms (1 byte)
   uint8_t bin_size_ms = data[4];
@@ -257,7 +232,7 @@ ByteArray NDTPMessage::pack() const {
     throw std::runtime_error("Unsupported payload type");
   }
 
-  uint16_t crc = htons(crc16(result));
+  uint16_t crc = crc16(result);
   result.push_back((crc >> 8) & 0xFF);
   result.push_back(crc & 0xFF);
 
@@ -273,7 +248,7 @@ NDTPMessage NDTPMessage::unpack(const ByteArray& data) {
   auto header_bytes = std::vector<uint8_t>(data.begin(), data.begin() + NDTPHeader::NDTP_HEADER_SIZE);
   auto payload_bytes = std::vector<uint8_t>(data.begin() + NDTPHeader::NDTP_HEADER_SIZE, data.end() - 2);
 
-  uint16_t received_crc = ntohs((data[data.size() - 2] << 8) | data[data.size() - 1]);
+  uint16_t received_crc = (data[data.size() - 2] << 8) | data[data.size() - 1];
   if (!crc16_verify(data_bytes, received_crc)) {
     throw std::runtime_error(
       "CRC verification failed (expected " + std::to_string(received_crc) +
@@ -291,22 +266,6 @@ NDTPMessage NDTPMessage::unpack(const ByteArray& data) {
   }
 
   throw std::runtime_error("unsupported data type in NDTP header");
-}
-
-uint16_t NDTPMessage::crc16(const ByteArray& data, uint16_t poly, uint16_t init) {
-  uint16_t crc = init;
-  for (const auto& byte : data) {
-    crc ^= byte << 8;
-    for (int i = 0; i < 8; ++i) {
-      if (crc & 0x8000) {
-        crc = (crc << 1) ^ poly;
-      } else {
-        crc <<= 1;
-      }
-      crc &= 0xFFFF;
-    }
-  }
-  return crc & 0xFFFF;
 }
 
 bool NDTPMessage::crc16_verify(const ByteArray& data, uint16_t crc) {
