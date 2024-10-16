@@ -240,7 +240,7 @@ ByteArray NDTPMessage::pack() {
   return result;
 }
 
-NDTPMessage NDTPMessage::unpack(const ByteArray& data) {
+NDTPMessage NDTPMessage::unpack(const ByteArray& data, bool ignore_crc) {
   if (data.size() < 16) {
     throw std::runtime_error("invalid data size for NDTPMessage");
   }
@@ -248,13 +248,16 @@ NDTPMessage NDTPMessage::unpack(const ByteArray& data) {
   auto data_bytes = std::vector<uint8_t>(data.begin(), data.end() - 2);
   auto header_bytes = std::vector<uint8_t>(data.begin(), data.begin() + NDTPHeader::NDTP_HEADER_SIZE);
   auto payload_bytes = std::vector<uint8_t>(data.begin() + NDTPHeader::NDTP_HEADER_SIZE, data.end() - 2);
+  auto crc_bytes = std::vector<uint8_t>(data.end() - 2, data.end());
 
-  uint16_t received_crc = (data[data.size() - 2] << 8) | data[data.size() - 1];
+  uint16_t received_crc = crc_bytes[0] << 8 | crc_bytes[1];
   if (!crc16_verify(data_bytes, received_crc)) {
-    throw std::runtime_error(
-      "CRC verification failed (expected " + std::to_string(received_crc) +
-      ", got " + std::to_string(crc16(data_bytes)) + ")"
-    );
+      if (!ignore_crc) {
+        throw std::runtime_error(
+          "CRC verification failed (expected " + std::to_string(received_crc) +
+        ", got " + std::to_string(crc16(data_bytes)) + "; payload size: " + std::to_string(payload_bytes.size()) + " bytes)"
+      );
+    }
   }
 
   auto header = NDTPHeader::unpack(header_bytes);

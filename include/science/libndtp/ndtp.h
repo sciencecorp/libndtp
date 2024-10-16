@@ -99,7 +99,7 @@ struct NDTPMessage {
   ByteArray pack();
 
   // Unpacks the entire message from a byte array, verifying the CRC16.
-  static NDTPMessage unpack(const ByteArray& data);
+  static NDTPMessage unpack(const ByteArray& data, bool ignore_crc = false);
 
  private:
   // Verifies CRC16 checksum.
