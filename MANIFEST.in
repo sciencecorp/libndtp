@@ -1,1 +1,0 @@
-recursive-include external/sciencecorp/synapse-api *.proto
