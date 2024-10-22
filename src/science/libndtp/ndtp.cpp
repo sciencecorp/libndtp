@@ -4,10 +4,6 @@
 #include <cstring>
 #include <iostream>
 #include "science/libndtp/utils.h"
-#ifdef __linux__
-#include <arpa/inet.h>
-#endif
-
 
 namespace science::libndtp {
 
