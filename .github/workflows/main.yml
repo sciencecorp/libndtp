@@ -7,6 +7,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  _VCPKG_: ${{ github.workspace }}/external/microsoft/vcpkg
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+  VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/external/microsoft/vcpkg/bincache
+  VCPKG_FEATURE_FLAGS: "dependencygraph"
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -17,6 +23,32 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.GH_TOKEN }}
+
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: "Create directory '${{ env.VCPKG_DEFAULT_BINARY_CACHE }}'"
+        run: mkdir -p ${{ github.workspace }}/external/microsoft/vcpkg/bincache
+        shell: bash
+
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "3.29.0"
+
+      - name: Restore vcpkg
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ env._VCPKG_ }}
+            !${{ env._VCPKG_ }}/buildtrees
+            !${{ env._VCPKG_ }}/packages
+            !${{ env._VCPKG_ }}/downloads
+            !${{ env._VCPKG_ }}/installed
+          key: |
+            ubuntu-latest-${{ hashFiles( '.git/modules/external/microsoft/vcpkg/HEAD' )}}
 
       - name: Set up Python
         uses: actions/setup-python@v4
