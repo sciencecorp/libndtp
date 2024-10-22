@@ -134,8 +134,8 @@ TEST(NDTPTest, NDTPPayloadBroadbandPackUnpack) {
 TEST(NDTPTest, NDTPPayloadSpiketrainPackUnpack) {
   std::vector<uint8_t> spike_counts = {1, 2, 3, 2, 1};
   NDTPPayloadSpiketrain payload{
-    .spike_counts = spike_counts,
     .bin_size_ms = 1,
+    .spike_counts = spike_counts,
   };
   auto packed = payload.pack();
   auto unpacked = NDTPPayloadSpiketrain::unpack(packed);
