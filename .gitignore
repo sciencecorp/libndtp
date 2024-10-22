@@ -1,5 +1,5 @@
 # Generated protobuf code
-synapse/api/
+include/science/libndtp/synapse/api/
 bin/
 proto/*
 *_pb2.py

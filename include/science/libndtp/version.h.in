@@ -1,0 +1,8 @@
+#pragma once
+#include <string>
+
+namespace science::libndtp {
+
+const std::string LIBNDTP_VERSION = "@CMAKE_PROJECT_VERSION@";
+
+}

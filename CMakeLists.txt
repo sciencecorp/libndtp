@@ -1,186 +1,115 @@
-cmake_minimum_required(VERSION 3.15)
-cmake_policy(SET CMP0091 NEW)
-cmake_policy(SET CMP0135 NEW)
+cmake_minimum_required(VERSION 3.23.5)
 
-# Use dynamic runtime library (/MD)
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+SET(VCPKG_MANIFEST_FEATURES  "" CACHE STRING "vcpkg features")
 
-project(libndtp VERSION 0.1.0 LANGUAGES CXX)
+project(libndtp VERSION 0.0.1)
 
-# Set C++ standard
+set(TARGET_NAME "science-${PROJECT_NAME}")
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
-# Include FetchContent module
-include(FetchContent)
+find_package(Protobuf REQUIRED CONFIG)
 
-# ======================================
-# Fetch and Build Abseil
-# ======================================
+add_library(${PROJECT_NAME})
 
-FetchContent_Declare(
-    absl
-    GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
-    GIT_TAG        20230125.3  # Use a stable release. Adjust as needed.
-    CMAKE_ARGS
-        -DCMAKE_POSITION_INDEPENDENT_CODE=TRUE
-        -DCMAKE_MSVC_RUNTIME_LIBRARY:STRING=${CMAKE_MSVC_RUNTIME_LIBRARY}
-        -DABSL_BUILD_TESTING=OFF
-        -DABSL_ENABLE_INSTALL=ON       # Enable installation
-        -DBUILD_SHARED_LIBS=ON          # Build shared libraries
-        -DABSL_USE_STATIC_MSVC_RUNTIME=OFF  # Use dynamic runtime
-)
-FetchContent_MakeAvailable(absl)
+configure_file(include/science/libndtp/version.h.in ${CMAKE_BINARY_DIR}/include/science/libndtp/version.h @ONLY)
 
-# ======================================
-# Fetch and Build Protobuf
-# ======================================
+get_filename_component(PROTO_INCLUDE_DIR external/sciencecorp/synapse-api REALPATH)
+set(PROTO_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/sciencecorp/synapse-api")
+set(PROTO_OUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/science/libndtp/synapse")
+file(MAKE_DIRECTORY ${PROTO_OUT_DIR})
+file(GLOB_RECURSE PROTOS ${PROTO_INCLUDE_DIR}/api/*.proto)
 
-# Define Protobuf version and source
-set(PROTOBUF_VERSION "28.2")
-set(PROTOBUF_URL "https://github.com/protocolbuffers/protobuf/archive/refs/tags/v${PROTOBUF_VERSION}.tar.gz")
-set(PROTOBUF_SHA256 "b2340aa47faf7ef10a0328190319d3f3bee1b24f426d4ce8f4253b6f27ce16db")
+message(STATUS "PROTO_INCLUDE_DIR: ${PROTO_INCLUDE_DIR}")
 
-FetchContent_Declare(
-    protobuf
-    GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
-    GIT_TAG        v${PROTOBUF_VERSION}
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    CMAKE_ARGS
-        -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/protobuf-install
-        -Dprotobuf_BUILD_SHARED_LIBS=ON
-        -Dprotobuf_MSVC_STATIC_RUNTIME=OFF
-        -Dprotobuf_WITH_ZLIB=OFF
-        -Dprotobuf_BUILD_TESTS=OFF
-        -Dprotobuf_BUILD_EXAMPLES=OFF
-        -Dprotobuf_BUILD_PROTOC_BINARIES=ON
-        -DBUILD_TESTING=OFF
-        -Dprotobuf_ABSL_PROVIDER=package  # Use external Abseil
-        -Dabsl_DIR=${absl_BINARY_DIR}/absl
-        -DCMAKE_MSVC_RUNTIME_LIBRARY:STRING=${CMAKE_MSVC_RUNTIME_LIBRARY}
-        -Dprotobuf_USE_STATIC_MSVC_RUNTIME=OFF  # Use dynamic runtime
-)
-FetchContent_MakeAvailable(protobuf)
-
-# Set the path to the protoc executable
-set(PROTOC_EXECUTABLE $<TARGET_FILE:protobuf::protoc>)
-
-# ======================================
-# Fetch and Configure Pybind11
-# ======================================
-
-FetchContent_Declare(
-    pybind11
-    GIT_REPOSITORY https://github.com/pybind/pybind11.git
-    GIT_TAG        v2.13.6
-    CMAKE_ARGS
-        -DCMAKE_MSVC_RUNTIME_LIBRARY=${CMAKE_MSVC_RUNTIME_LIBRARY}  # Ensure consistency
-)
-FetchContent_MakeAvailable(pybind11)
-
-# ======================================
-# Generate Protobuf Sources
-# ======================================
-
-# Collect all .proto files recursively
-file(GLOB_RECURSE PROTO_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/synapse-api/*.proto"
-    "${CMAKE_CURRENT_SOURCE_DIR}/synapse-api/**/*.proto"
+protobuf_generate(
+  TARGET ${PROJECT_NAME}
+  LANGUAGE cpp
+  IMPORT_DIRS ${PROTO_INCLUDE_DIR}
+  PROTOS ${PROTOS}
+  PROTOC_OUT_DIR ${PROTO_OUT_DIR}
+  OUT_VAR PROTO_SOURCES
 )
 
-# Function to compile .proto files to C++ sources
-set(GENERATED_PROTO_SRCS)
-set(GENERATED_PROTO_HDRS)
-foreach(proto_file ${PROTO_FILES})
-    # Get the relative path of the .proto file from the source directory
-    file(RELATIVE_PATH proto_rel_path "${CMAKE_CURRENT_SOURCE_DIR}/synapse-api" "${proto_file}")
-    # Get the directory of the .proto file
-    get_filename_component(proto_rel_dir "${proto_rel_path}" DIRECTORY)
-    # Get the filename without extension
-    get_filename_component(proto_name "${proto_file}" NAME_WE)
-
-    # Set the output paths in the build directory, maintaining directory structure
-    set(proto_src "${CMAKE_CURRENT_BINARY_DIR}/${proto_rel_dir}/${proto_name}.pb.cc")
-    set(proto_hdr "${CMAKE_CURRENT_BINARY_DIR}/${proto_rel_dir}/${proto_name}.pb.h")
-
-    list(APPEND GENERATED_PROTO_SRCS "${proto_src}")
-    list(APPEND GENERATED_PROTO_HDRS "${proto_hdr}")
-
-    add_custom_command(
-        OUTPUT "${proto_src}" "${proto_hdr}"
-        COMMAND ${PROTOC_EXECUTABLE}
-        ARGS --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
-             -I "${CMAKE_CURRENT_SOURCE_DIR}/synapse-api"
-             -I "${CMAKE_CURRENT_SOURCE_DIR}/synapse-api/api"
-             -I "${CMAKE_CURRENT_SOURCE_DIR}"
-             -I "${protobuf_SOURCE_DIR}/src"
-             "${proto_file}"
-        DEPENDS "${proto_file}"
-    )
-endforeach()
-
-# Include the generated Protobuf directory (build directory)
-include_directories("${CMAKE_CURRENT_BINARY_DIR}")
-
-# Also include subdirectories where generated headers are placed
-include_directories("${CMAKE_CURRENT_BINARY_DIR}/synapse-api")
-
-# Include the Protobuf source directory for standard .proto files
-include_directories("${protobuf_SOURCE_DIR}/src")
-
-# ======================================
-# Define Source Files
-# ======================================
-
-# Collect all library source files
-file(GLOB LIB_SOURCES "src/*.cpp" "bindings.cpp")
-
-# ======================================
-# Add the Pybind11 Python Module
-# ======================================
-
-pybind11_add_module(libndtp ${LIB_SOURCES} ${GENERATED_PROTO_SRCS})
-
-# Explicitly set MSVC runtime library for libndtp target
-set_target_properties(libndtp PROPERTIES
-    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
+file(GLOB_RECURSE SOURCES src/science/libndtp/*.cpp)
+target_sources(
+  ${PROJECT_NAME}
+  PRIVATE
+  ${SOURCES}
 )
 
-# ======================================
-# Link Libraries
-# ======================================
+target_include_directories(
+  ${PROJECT_NAME}
+  PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/science/libndtp/synapse>
+  $<INSTALL_INTERFACE:include>
+  $<INSTALL_INTERFACE:include/science/libndtp/synapse>
+)
 
-# Link against Pybind11 and Protobuf libraries
-target_link_libraries(libndtp PRIVATE pybind11::module protobuf::libprotobuf)
+target_link_libraries(
+  ${PROJECT_NAME}
+  PRIVATE
+  protobuf::libprotobuf
+)
 
-# Ensure libndtp is built after protobuf
-add_dependencies(libndtp protobuf::libprotobuf)
+include(GNUInstallDirs)
+install(
+  TARGETS ${PROJECT_NAME}
+  EXPORT ${TARGET_NAME}Targets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
-# ======================================
-# Platform-specific Definitions
-# ======================================
+install(
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING PATTERN "*.h"
+)
 
-if(MSVC)
-    target_compile_definitions(libndtp PRIVATE _CRT_SECURE_NO_WARNINGS)
-    # Additional MSVC-specific settings can go here
+# Export targets
+install(
+  EXPORT ${TARGET_NAME}Targets
+  FILE ${TARGET_NAME}Targets.cmake
+  NAMESPACE science::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}Config.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+
+install(
+  FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}Config.cmake"
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+
+if ("tests" IN_LIST VCPKG_MANIFEST_FEATURES)
+  enable_testing()
+
+  find_package(GTest REQUIRED)
+
+  file(GLOB_RECURSE TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp")
+
+  add_executable(${PROJECT_NAME}_tests ${TEST_SOURCES})
+
+  target_link_libraries(${PROJECT_NAME}_tests
+    PRIVATE
+    ${PROJECT_NAME}
+    GTest::GTest
+    GTest::Main
+  )
+
+  include(GoogleTest)
+  gtest_discover_tests(${PROJECT_NAME}_tests)
 endif()
-
-# ======================================
-# Set Output Directories
-# ======================================
-
-set_target_properties(libndtp PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib"
-    PREFIX ""  # Remove 'lib' prefix on Unix-like systems
-    SUFFIX "${Python_EXTENSION_MODULE_SUFFIX}"
-)
-
-# ======================================
-# Installation Rules (Optional)
-# ======================================
-
-install(TARGETS libndtp
-    LIBRARY DESTINATION lib
-)
