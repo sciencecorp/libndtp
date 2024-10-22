@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <stdexcept>
+#include <variant>
 #include <vector>
 #include "science/libndtp/ndtp.h"
 #include "science/libndtp/utils.h"
@@ -21,9 +22,9 @@ struct ElectricalBroadbandData {
     std::vector<uint64_t> channel_data;
   };
 
-  int bit_width;
   bool is_signed;
-  int sample_rate;
+  uint32_t bit_width;
+  uint32_t sample_rate;
   uint64_t t0;
   std::vector<ChannelData> channels;
 

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <stdexcept>
+#include <variant>
 #include <vector>
 #include "science/libndtp/utils.h"
 #include "science/libndtp/synapse/api/datatype.pb.h"
