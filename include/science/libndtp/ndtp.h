@@ -78,11 +78,10 @@ struct NDTPPayloadBroadband {
  * NDTPPayloadSpiketrain represents spiketrain payload data.
  */
 struct NDTPPayloadSpiketrain {
-  static constexpr uint8_t BIT_WIDTH_BINNED_SPIKES = 2;
+  static constexpr uint8_t BIT_WIDTH_BINNED_SPIKES = 4;
 
   uint8_t bin_size_ms;                // 2 bits
   std::vector<uint8_t> spike_counts;  // 2 bits
-
 
   ByteArray pack() const;
   static NDTPPayloadSpiketrain unpack(const ByteArray& data);
