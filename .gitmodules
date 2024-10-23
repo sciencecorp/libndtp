@@ -1,9 +1,9 @@
 [submodule "external/sciencecorp/synapse-api"]
 	path = external/sciencecorp/synapse-api
-	url = git@github.com:sciencecorp/synapse-api.git
+	url = https://github.com/sciencecorp/synapse-api.git 
 [submodule "external/sciencecorp/vcpkg"]
 	path = external/sciencecorp/vcpkg
-	url = git@github.com:sciencecorp/vcpkg.git
+	url = https://github.com/sciencecorp/vcpkg.git
 [submodule "external/microsoft/vcpkg"]
 	path = external/microsoft/vcpkg
-	url = git@github.com:microsoft/vcpkg.git
+	url = https://github.com/microsoft/vcpkg.git
