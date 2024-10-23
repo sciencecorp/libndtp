@@ -279,7 +279,7 @@ TEST(NDTPTest, NDTPMessageSpiketrainPackUnpack) {
   };
   NDTPPayloadSpiketrain payload {
     .bin_size_ms = 1,
-    .spike_counts = std::vector<uint8_t>{1, 2, 3, 2, 1}
+    .spike_counts = std::vector<uint8_t>{1, 2, 3, 2, 12}
   };
   NDTPMessage message {
     .header = header,
@@ -308,15 +308,36 @@ TEST(NDTPTest, NDTPMessageSpiketrainPackUnpack) {
   EXPECT_EQ(packed[16], 0x01);
 
   // Spike counts
-  EXPECT_EQ(packed[17], 0x6e);  // 1,2,3,2 -> 01101110 -> 0x6E
-  EXPECT_EQ(packed[18], 0x40);  // 1 -> 01000000 -> 0x40
+  if (NDTPPayloadSpiketrain::BIT_WIDTH_BINNED_SPIKES == 2) {
+    EXPECT_EQ(packed[17], 0x6e);  // 1,2,3,2 -> 01 10 11 10 -> 0x6E
+    // 12 gets clamped to 3
+    EXPECT_EQ(packed[18], 0xC0);  // 3 -> 11 00 00 00 -> 0xC0
+    uint16_t crc = (packed[packed.size() - 2] << 8) | packed[packed.size() - 1];
+    EXPECT_EQ(crc, 12543);
 
-  uint16_t crc = (packed[packed.size() - 2] << 8) | packed[packed.size() - 1];
-  EXPECT_EQ(crc, 46076);
+    // set the value to 3 for comparison
+    payload.spike_counts[4] = 3;
+
+  } else if (NDTPPayloadSpiketrain::BIT_WIDTH_BINNED_SPIKES == 4) {
+    EXPECT_EQ(packed[17], 0x12);  // 1,2 -> 0001 0010 -> 0x12
+    EXPECT_EQ(packed[18], 0x32);  // 3,2 -> 0011 0010 -> 0x32
+    EXPECT_EQ(packed[19], 0xC0);  // 12,0 -> 1100 0000 -> 0xC0
+
+    uint16_t crc = (packed[packed.size() - 2] << 8) | packed[packed.size() - 1];
+    EXPECT_EQ(crc, 22303);
+  } else {
+    FAIL() << "untested bit width for binned spikes";
+  }
+
 
   auto unpacked = NDTPMessage::unpack(packed);
 
   EXPECT_EQ(unpacked.header, header) << "header is not equal to unpacked.header";
+
+  auto unpacked_payload = std::get<NDTPPayloadSpiketrain>(unpacked.payload);
+  for (int i = 0; i < unpacked_payload.spike_counts.size(); i++) {
+    EXPECT_EQ(unpacked_payload.spike_counts[i], payload.spike_counts[i]) << "spike_counts[" << i << "] is not equal";
+  }
 
   EXPECT_EQ(
     std::get<NDTPPayloadSpiketrain>(unpacked.payload),
