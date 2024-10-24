@@ -64,13 +64,6 @@ std::pair<ByteArray, BitOffset> to_bytes(
   for (const auto& value : values) {
     int val = value;
     if (is_signed) {
-      int min_value = -(1 << (bit_width - 1));
-      int max_value = (1 << (bit_width - 1)) - 1;
-      if (val < min_value || val > max_value) {
-        throw std::invalid_argument(
-          "signed value " + std::to_string(val) + " doesn't fit in " + std::to_string(bit_width) + " bits"
-        );
-      }
       if (val < 0) {
         val = (1 << bit_width) + val;
       }
