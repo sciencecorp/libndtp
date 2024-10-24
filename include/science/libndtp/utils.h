@@ -74,16 +74,7 @@ std::pair<ByteArray, BitOffset> to_bytes(
       if (val < 0) {
         val = (1 << bit_width) + val;
       }
-    } else {
-      if (val < 0) {
-        throw std::invalid_argument("unsigned packing specified, but value is negative");
-      }
-      if (val >= (1 << bit_width)) {
-        throw std::invalid_argument(
-          "unsigned value " + std::to_string(val) + " doesn't fit in " + std::to_string(bit_width) + " bits"
-        );
-      }
-    }
+    } 
 
     int remaining_bits = bit_width;
     while (remaining_bits > 0) {
