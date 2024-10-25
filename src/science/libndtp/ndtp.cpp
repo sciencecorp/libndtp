@@ -177,7 +177,7 @@ ByteArray NDTPPayloadSpiketrain::pack() const {
   result.push_back(bin_size_ms);
 
   // pack clamped spike counts
-  auto [bytes, final_bit_offset] = to_bytes(clamped_counts, BIT_WIDTH_BINNED_SPIKES, {}, 0);
+  auto [bytes, final_bit_offset, _] = to_bytes(clamped_counts, BIT_WIDTH_BINNED_SPIKES, {}, 0);
   result.insert(result.end(), bytes.begin(), bytes.end());
 
   return result;
