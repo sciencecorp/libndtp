@@ -33,7 +33,7 @@ inline uint16_t crc16(const ByteArray& data, uint16_t poly = 0x8005, uint16_t in
  * Handles both signed and unsigned integers.
  */
 template <typename T>
-std::pair<ByteArray, BitOffset> to_bytes(
+std::tuple<ByteArray, BitOffset, bool> to_bytes(
     const std::vector<T>& values,
     uint8_t bit_width,
     const ByteArray& existing = {},
@@ -61,11 +61,16 @@ std::pair<ByteArray, BitOffset> to_bytes(
   uint8_t current_byte = (continue_last && !result.empty()) ? result.back() : 0;
   int bits_in_current_byte = writing_bit_offset;
 
+  bool status_good = true;
   for (const auto& value : values) {
-    int val = value;
+    T val = value;
     if (is_signed) {
-      if (val < 0) {
-        val = (1 << bit_width) + val;
+      if ( val > (1 << (bit_width - 1)) - 1 || val < -(1 << (bit_width - 1))) {
+        status_good = false; 
+      }
+    } else {
+      if (val > (1 << bit_width) - 1) {
+        status_good = false;
       }
     } 
 
@@ -103,7 +108,7 @@ std::pair<ByteArray, BitOffset> to_bytes(
     result.push_back(current_byte);
   }
 
-  return { result, bits_in_current_byte };
+  return { result, bits_in_current_byte, status_good };
 }
 
 
