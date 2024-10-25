@@ -95,15 +95,12 @@ ByteArray NDTPPayloadBroadband::pack() const {
     }
 
     auto p_cid = to_bytes<uint32_t>({c.channel_id}, 24, payload, bit_offset);
-    payload = std::get<0>(p_cid);
     bit_offset = std::get<1>(p_cid);
 
     auto p_num_samples = to_bytes<uint16_t>({static_cast<uint16_t>(num_samples)}, 16, payload, bit_offset);
-    payload = std::get<0>(p_num_samples);
     bit_offset = std::get<1>(p_num_samples);
 
     auto p_channel_data = to_bytes<uint64_t>(c.channel_data, bit_width, payload, bit_offset, is_signed);
-    payload = std::get<0>(p_channel_data);
     bit_offset = std::get<1>(p_channel_data);
   }
 

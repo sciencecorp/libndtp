@@ -49,13 +49,13 @@ std::tuple<ByteArray, BitOffset, bool> to_bytes(
   writing_bit_offset = writing_bit_offset % 8;
 
   ByteArray& result = existing;
-  // if (!existing.empty()) {
-  //   if (truncate_bytes < static_cast<int>(existing.size())) {
-  //     result.erase(result.begin(), result.begin() + truncate_bytes);
-  //   } else {
-  //     result.clear();
-  //   }
-  // }
+  if (!existing.empty()) {
+    if (truncate_bytes < static_cast<int>(existing.size())) {
+      result.erase(result.begin(), result.begin() + truncate_bytes);
+    } else {
+      result.clear();
+    }
+  }
 
   bool continue_last = !existing.empty() && writing_bit_offset > 0;
   uint8_t current_byte = (continue_last && !result.empty()) ? result.back() : 0;
