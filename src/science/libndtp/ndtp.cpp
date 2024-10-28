@@ -69,7 +69,8 @@ NDTPHeader NDTPHeader::unpack(const ByteArray& data) {
   return NDTPHeader{version, data_type, ntohll(n_timestamp), ntohs(n_seq_number)};
 }
 
-ByteArray NDTPPayloadBroadband::pack() const {
+template <typename Tinteger>
+ByteArray GenericNDTPPayloadBroadband<Tinteger>::pack() const {
   ByteArray payload;
 
   // First byte: bit width and signed flag
@@ -100,14 +101,15 @@ ByteArray NDTPPayloadBroadband::pack() const {
     auto p_num_samples = to_bytes<uint16_t>({static_cast<uint16_t>(num_samples)}, 16, payload, bit_offset);
     bit_offset = std::get<1>(p_num_samples);
 
-    auto p_channel_data = to_bytes<uint64_t>(c.channel_data, bit_width, payload, bit_offset, is_signed);
+    auto p_channel_data = to_bytes<Tinteger>(c.channel_data, bit_width, payload, bit_offset, is_signed);
     bit_offset = std::get<1>(p_channel_data);
   }
 
   return payload;
 }
 
-NDTPPayloadBroadband NDTPPayloadBroadband::unpack(const ByteArray& data) {
+template <typename T>
+GenericNDTPPayloadBroadband<uint64_t> GenericNDTPPayloadBroadband<T>::unpack(const ByteArray& data) {
   if (data.size() < 7) {
     throw std::runtime_error("Invalid data size for NDTPPayloadBroadband");
   }

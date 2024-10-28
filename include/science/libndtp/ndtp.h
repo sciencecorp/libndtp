@@ -43,16 +43,19 @@ struct NDTPHeader {
 /**
  * NDTPPayloadBroadband represents broadband payload data.
  */
-struct NDTPPayloadBroadband {
+template <typename T>
+struct GenericNDTPPayloadBroadband {
+
   struct ChannelData {
     uint32_t channel_id;  // 24-bit
-    std::vector<uint64_t> channel_data;
+    std::vector<T> channel_data;
 
     bool operator==(const ChannelData& other) const {
       return channel_id == other.channel_id && channel_data == other.channel_data;
     }
 
     bool operator!=(const ChannelData& other) const { return !(*this == other); }
+
   };
 
   bool is_signed;        // 1 bit
@@ -62,17 +65,19 @@ struct NDTPPayloadBroadband {
   std::vector<ChannelData> channels;
 
   ByteArray pack() const;
-  static NDTPPayloadBroadband unpack(const ByteArray& data);
+  static GenericNDTPPayloadBroadband<uint64_t> unpack(const ByteArray& data);
 
-  bool operator==(const NDTPPayloadBroadband& other) const {
+  bool operator==(const GenericNDTPPayloadBroadband& other) const {
     return is_signed == other.is_signed &&
             bit_width == other.bit_width &&
             sample_rate == other.sample_rate &&
             channels == other.channels;
   }
 
-  bool operator!=(const NDTPPayloadBroadband& other) const { return !(*this == other); }
+  bool operator!=(const GenericNDTPPayloadBroadband& other) const { return !(*this == other); }
 };
+
+typedef GenericNDTPPayloadBroadband<uint64_t> NDTPPayloadBroadband;
 
 /**
  * NDTPPayloadSpiketrain represents spiketrain payload data.
