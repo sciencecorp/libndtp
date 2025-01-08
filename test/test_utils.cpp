@@ -21,7 +21,8 @@ TEST(UtilsTest, ToBytesBasicFunctionality) {
   EXPECT_EQ(offset3, 0);
   EXPECT_TRUE(success3);
 
-  auto [result4, offset4, success4] = to_bytes<int64_t>({-7, -5, -3, -1}, 12, {}, 0, true);
+  ByteArray existing = {};
+  auto [result4, offset4, success4] = to_bytes<int64_t>({-7, -5, -3, -1}, 12, existing, 0, true);
   EXPECT_EQ(result4, (std::vector<uint8_t>{0xFF, 0x9F, 0xFB, 0xFF, 0xDF, 0xFF}));
   EXPECT_EQ(offset4, 0);
   EXPECT_TRUE(success4);
