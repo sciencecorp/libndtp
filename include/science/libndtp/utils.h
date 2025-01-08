@@ -36,7 +36,7 @@ template <typename T>
 std::tuple<ByteArray, BitOffset, bool> to_bytes(
     const std::vector<T>& values,
     uint8_t bit_width,
-    ByteArray& existing = {},
+    ByteArray& existing,
     size_t writing_bit_offset = 0,
     bool is_signed = false,
     bool is_le = false
@@ -104,6 +104,17 @@ std::tuple<ByteArray, BitOffset, bool> to_bytes(
   return { result, bits_in_current_byte, status_good };
 }
 
+template <typename T>
+std::tuple<ByteArray, BitOffset, bool> to_bytes(
+    const std::vector<T>& values,
+    uint8_t bit_width,
+    size_t writing_bit_offset = 0,
+    bool is_signed = false,
+    bool is_le = false
+) { 
+  ByteArray existing = {};
+  return to_bytes(values, bit_width, existing, writing_bit_offset, is_signed, is_le);
+}
 
 /**
  * Parses a list of integers from a byte array with the specified bit width.
