@@ -36,7 +36,7 @@ template <typename T>
 std::tuple<ByteArray, BitOffset, bool> to_bytes(
     const std::vector<T>& values,
     uint8_t bit_width,
-    const ByteArray& existing = {},
+    ByteArray& existing,
     size_t writing_bit_offset = 0,
     bool is_signed = false,
     bool is_le = false
@@ -48,14 +48,7 @@ std::tuple<ByteArray, BitOffset, bool> to_bytes(
   size_t truncate_bytes = writing_bit_offset / 8;
   writing_bit_offset = writing_bit_offset % 8;
 
-  ByteArray result = existing;
-  if (!existing.empty()) {
-    if (truncate_bytes < static_cast<int>(existing.size())) {
-      result.erase(result.begin(), result.begin() + truncate_bytes);
-    } else {
-      result.clear();
-    }
-  }
+  ByteArray& result = existing;
 
   bool continue_last = !existing.empty() && writing_bit_offset > 0;
   uint8_t current_byte = (continue_last && !result.empty()) ? result.back() : 0;
@@ -111,6 +104,17 @@ std::tuple<ByteArray, BitOffset, bool> to_bytes(
   return { result, bits_in_current_byte, status_good };
 }
 
+template <typename T>
+std::tuple<ByteArray, BitOffset, bool> to_bytes(
+    const std::vector<T>& values,
+    uint8_t bit_width,
+    size_t writing_bit_offset = 0,
+    bool is_signed = false,
+    bool is_le = false
+) { 
+  ByteArray existing = {};
+  return to_bytes(values, bit_width, existing, writing_bit_offset, is_signed, is_le);
+}
 
 /**
  * Parses a list of integers from a byte array with the specified bit width.

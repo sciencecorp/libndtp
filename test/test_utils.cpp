@@ -21,17 +21,21 @@ TEST(UtilsTest, ToBytesBasicFunctionality) {
   EXPECT_EQ(offset3, 0);
   EXPECT_TRUE(success3);
 
-  auto [result4, offset4, success4] = to_bytes<int64_t>({-7, -5, -3, -1}, 12, {}, 0, true);
+  ByteArray existing = {};
+  auto [result4, offset4, success4] = to_bytes<int64_t>({-7, -5, -3, -1}, 12, existing, 0, true);
   EXPECT_EQ(result4, (std::vector<uint8_t>{0xFF, 0x9F, 0xFB, 0xFF, 0xDF, 0xFF}));
   EXPECT_EQ(offset4, 0);
   EXPECT_TRUE(success4);
 
-  auto [result5, offset5, success5] = to_bytes<uint64_t>({7, 5, 3}, 12, {0x01, 0x00}, 4);
+
+  ByteArray existing1 = {0x01, 0x00};
+  auto [result5, offset5, success5] = to_bytes<uint64_t>({7, 5, 3}, 12, existing1, 4);
   EXPECT_EQ(result5, (std::vector<uint8_t>{0x01, 0x00, 0x07, 0x00, 0x50, 0x03}));
   EXPECT_EQ(offset5, 0);
   EXPECT_TRUE(success5);
 
-  auto [result6, offset6, success6] = to_bytes<int64_t>({-7, -5, -3}, 12, {0x01, 0x00}, 4, true);
+  ByteArray existing2 = {0x01, 0x00};
+  auto [result6, offset6, success6] = to_bytes<int64_t>({-7, -5, -3}, 12, existing2, 4, true);
   EXPECT_EQ(result6, (std::vector<uint8_t>{0x01, 0x0F, 0xF9, 0xFF, 0xBF, 0xFD}));
   EXPECT_EQ(offset6, 0);
   EXPECT_TRUE(success6);

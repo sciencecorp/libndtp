@@ -43,16 +43,19 @@ struct NDTPHeader {
 /**
  * NDTPPayloadBroadband represents broadband payload data.
  */
-struct NDTPPayloadBroadband {
+template <typename T>
+struct GenericNDTPPayloadBroadband {
+
   struct ChannelData {
     uint32_t channel_id;  // 24-bit
-    std::vector<uint64_t> channel_data;
+    std::vector<T> channel_data;
 
     bool operator==(const ChannelData& other) const {
       return channel_id == other.channel_id && channel_data == other.channel_data;
     }
 
     bool operator!=(const ChannelData& other) const { return !(*this == other); }
+
   };
 
   bool is_signed;        // 1 bit
@@ -61,18 +64,58 @@ struct NDTPPayloadBroadband {
   uint32_t sample_rate;  // 2 bytes
   std::vector<ChannelData> channels;
 
-  ByteArray pack() const;
-  static NDTPPayloadBroadband unpack(const ByteArray& data);
+  static GenericNDTPPayloadBroadband<uint64_t> unpack(const ByteArray& data);
 
-  bool operator==(const NDTPPayloadBroadband& other) const {
+  bool operator==(const GenericNDTPPayloadBroadband& other) const {
     return is_signed == other.is_signed &&
             bit_width == other.bit_width &&
             sample_rate == other.sample_rate &&
             channels == other.channels;
   }
 
-  bool operator!=(const NDTPPayloadBroadband& other) const { return !(*this == other); }
+  bool operator!=(const GenericNDTPPayloadBroadband& other) const { return !(*this == other); }
+
+  ByteArray pack() const {
+    ByteArray payload;
+
+    // First byte: bit width and signed flag
+    payload.push_back(((bit_width & 0x7F) << 1) | (is_signed ? 1 : 0));
+
+    // Next three bytes: number of channels
+    uint32_t n_channels = channels.size();
+    payload.push_back((n_channels >> 16) & 0xFF);
+    payload.push_back((n_channels >> 8) & 0xFF);
+    payload.push_back((n_channels) & 0xFF);
+
+    // Next three bytes: sample rate
+    uint32_t n_sample_rate = sample_rate;
+    payload.push_back((n_sample_rate >> 16) & 0xFF);
+    payload.push_back((n_sample_rate >> 8) & 0xFF);
+    payload.push_back(n_sample_rate & 0xFF);
+
+    size_t bit_offset = 0;
+    for (const auto& c : channels) {
+      size_t num_samples = c.channel_data.size();
+      if (num_samples > 0xFFFF) {
+        throw std::runtime_error("number of samples is too large, must be less than 65536");
+      }
+
+      auto p_cid = to_bytes<uint32_t>({c.channel_id}, 24, payload, bit_offset);
+      bit_offset = std::get<1>(p_cid);
+
+      auto p_num_samples = to_bytes<uint16_t>({static_cast<uint16_t>(num_samples)}, 16, payload, bit_offset);
+      bit_offset = std::get<1>(p_num_samples);
+
+      auto p_channel_data = to_bytes<T>(c.channel_data, bit_width, payload, bit_offset, is_signed);
+      bit_offset = std::get<1>(p_channel_data);
+    }
+
+    return payload;
+  }
+
 };
+
+typedef GenericNDTPPayloadBroadband<uint64_t> NDTPPayloadBroadband;
 
 /**
  * NDTPPayloadSpiketrain represents spiketrain payload data.

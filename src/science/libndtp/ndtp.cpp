@@ -69,48 +69,8 @@ NDTPHeader NDTPHeader::unpack(const ByteArray& data) {
   return NDTPHeader{version, data_type, ntohll(n_timestamp), ntohs(n_seq_number)};
 }
 
-ByteArray NDTPPayloadBroadband::pack() const {
-  ByteArray payload;
-
-  // First byte: bit width and signed flag
-  payload.push_back(((bit_width & 0x7F) << 1) | (is_signed ? 1 : 0));
-
-  // Next three bytes: number of channels
-  uint32_t n_channels = channels.size();
-  payload.push_back((n_channels >> 16) & 0xFF);
-  payload.push_back((n_channels >> 8) & 0xFF);
-  payload.push_back((n_channels) & 0xFF);
-
-  // Next three bytes: sample rate
-  uint32_t n_sample_rate = sample_rate;
-  payload.push_back((n_sample_rate >> 16) & 0xFF);
-  payload.push_back((n_sample_rate >> 8) & 0xFF);
-  payload.push_back(n_sample_rate & 0xFF);
-
-  size_t bit_offset = 0;
-  for (const auto& c : channels) {
-    size_t num_samples = c.channel_data.size();
-    if (num_samples > 0xFFFF) {
-      throw std::runtime_error("number of samples is too large, must be less than 65536");
-    }
-
-    auto p_cid = to_bytes<uint32_t>({c.channel_id}, 24, payload, bit_offset);
-    payload = std::get<0>(p_cid);
-    bit_offset = std::get<1>(p_cid);
-
-    auto p_num_samples = to_bytes<uint16_t>({static_cast<uint16_t>(num_samples)}, 16, payload, bit_offset);
-    payload = std::get<0>(p_num_samples);
-    bit_offset = std::get<1>(p_num_samples);
-
-    auto p_channel_data = to_bytes<uint64_t>(c.channel_data, bit_width, payload, bit_offset, is_signed);
-    payload = std::get<0>(p_channel_data);
-    bit_offset = std::get<1>(p_channel_data);
-  }
-
-  return payload;
-}
-
-NDTPPayloadBroadband NDTPPayloadBroadband::unpack(const ByteArray& data) {
+template <typename T>
+GenericNDTPPayloadBroadband<uint64_t> GenericNDTPPayloadBroadband<T>::unpack(const ByteArray& data) {
   if (data.size() < 7) {
     throw std::runtime_error("Invalid data size for NDTPPayloadBroadband");
   }
@@ -176,9 +136,9 @@ ByteArray NDTPPayloadSpiketrain::pack() const {
   // Pack bin_size_ms (1 byte)
   result.push_back(bin_size_ms);
 
+  
   // pack clamped spike counts
-  auto [bytes, final_bit_offset, _] = to_bytes(clamped_counts, BIT_WIDTH_BINNED_SPIKES, {}, 0);
-  result.insert(result.end(), bytes.begin(), bytes.end());
+  auto [bytes, final_bit_offset, _] = to_bytes(clamped_counts, BIT_WIDTH_BINNED_SPIKES, result, 0);
 
   return result;
 }
