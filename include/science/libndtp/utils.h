@@ -7,25 +7,17 @@
 #include <utility>
 #include <vector>
 
+#include <boost/crc.hpp>
+
 namespace science::libndtp {
 
 using ByteArray = std::vector<uint8_t>;
 using BitOffset = size_t;
 
-inline uint16_t crc16(const ByteArray& data, uint16_t poly = 0x8005, uint16_t init = 0xFFFF) {
-  uint16_t crc = init;
-  for (const auto& byte : data) {
-    crc ^= byte << 8;
-    for (int i = 0; i < 8; ++i) {
-      if (crc & 0x8000) {
-        crc = (crc << 1) ^ poly;
-      } else {
-        crc <<= 1;
-      }
-      crc &= 0xFFFF;
-    }
-  }
-  return crc & 0xFFFF;
+inline uint16_t crc16(const ByteArray& data) {
+  boost::crc_16_type result;
+  result.process_bytes(data.data(), data.size());
+  return result.checksum();
 }
 
 /**
