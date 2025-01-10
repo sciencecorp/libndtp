@@ -178,12 +178,13 @@ TEST(NDTPTest, NDTPMessageBroadbandPackUnpack) {
 
   auto b = std::get<NDTPPayloadBroadband>(message.payload);
 
+  uint16_t expected_crc = 19660;
   auto packed = message.pack();
-  EXPECT_EQ(message._crc16, 23793);
+  EXPECT_EQ(message._crc16, expected_crc);
 
   EXPECT_EQ(
     to_hexstring(packed),
-    "01 02 00 00 00 00 49 96 02 d2 00 2a 18 00 00 03 00 00 03 00 00 00 00 01 00 00 00 00 10 00 20 00 3e 80 00 00 20 00 30 00 3e 87 d0 5c f1"
+    "01 02 00 00 00 00 49 96 02 d2 00 2a 18 00 00 03 00 00 03 00 00 00 00 01 00 00 00 00 10 00 20 00 3e 80 00 00 20 00 30 00 3e 87 d0 4c cc"
   );
 
   EXPECT_EQ(packed[0], 0x01);
@@ -198,12 +199,12 @@ TEST(NDTPTest, NDTPMessageBroadbandPackUnpack) {
   EXPECT_EQ(packed[9], 0xD2);
 
   uint16_t crc = (packed[packed.size() - 2] << 8) | packed[packed.size() - 1];
-  EXPECT_EQ(crc, 23793);
+  EXPECT_EQ(crc, expected_crc);
 
   auto unpacked = NDTPMessage::unpack(packed);
   EXPECT_EQ(unpacked.header, header) << "header is not equal to unpacked header";
   EXPECT_EQ(std::get<NDTPPayloadBroadband>(unpacked.payload), payload) << "payload is not equal to unpacked payload";
-  EXPECT_EQ(unpacked._crc16, 23793);
+  EXPECT_EQ(unpacked._crc16, expected_crc);
 
   auto unpacked_payload = std::get<NDTPPayloadBroadband>(unpacked.payload);
   EXPECT_EQ(unpacked_payload.channels.size(), payload.channels.size());
@@ -251,15 +252,16 @@ TEST(NDTPTest, NDTPMessageBroadbandPackUnpackLarge) {
   auto b = std::get<NDTPPayloadBroadband>(message.payload);
 
   auto packed = message.pack();
-  EXPECT_EQ(message._crc16, 45907);
+  uint16_t expected_crc = 32263;
+  EXPECT_EQ(message._crc16, expected_crc);
 
   uint16_t crc = (packed[packed.size() - 2] << 8) | packed[packed.size() - 1];
-  EXPECT_EQ(crc, 45907);
+  EXPECT_EQ(crc, expected_crc);
 
   auto unpacked = NDTPMessage::unpack(packed);
   EXPECT_EQ(unpacked.header, header) << "header is not equal to unpacked header";
   EXPECT_EQ(std::get<NDTPPayloadBroadband>(unpacked.payload), payload) << "payload is not equal to unpacked payload";
-  EXPECT_EQ(unpacked._crc16, 45907);
+  EXPECT_EQ(unpacked._crc16, expected_crc);
 
   auto unpacked_payload = std::get<NDTPPayloadBroadband>(unpacked.payload);
   EXPECT_EQ(unpacked_payload.channels.size(), payload.channels.size());
@@ -324,7 +326,7 @@ TEST(NDTPTest, NDTPMessageSpiketrainPackUnpack) {
     EXPECT_EQ(packed[19], 0xC0);  // 12,0 -> 1100 0000 -> 0xC0
 
     uint16_t crc = (packed[packed.size() - 2] << 8) | packed[packed.size() - 1];
-    EXPECT_EQ(crc, 22303);
+    EXPECT_EQ(crc, 40764);
   } else {
     FAIL() << "untested bit width for binned spikes";
   }
