@@ -1,11 +1,11 @@
 name: main
 
-on:
-  push:
-    branches:
-      - "main"
-  pull_request:
-  workflow_dispatch:
+# on:
+#   push:
+#     branches:
+#       - "main"
+#   pull_request:
+#   workflow_dispatch:
 
 env:
   _VCPKG_: ${{ github.workspace }}/external/microsoft/vcpkg

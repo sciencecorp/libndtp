@@ -1,0 +1,19 @@
+name: Build release packages for libndtp
+
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+      - name: Check bash
+        run: |
+          bash ops/package.sh
