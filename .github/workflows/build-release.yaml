@@ -30,4 +30,11 @@ jobs:
       
       - name: Build and package
         run: |
-          bash ops/package.sh
+          bash ops/package.sh 
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: libndtp-${{ matrix.platform }}
+          path: packages/*.tar.gz
+          retention-days: 7
