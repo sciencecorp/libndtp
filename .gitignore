@@ -177,3 +177,4 @@ data/
 config/
 
 output_*.json
+packages/
