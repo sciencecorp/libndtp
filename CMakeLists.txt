@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.23.5)
 
 SET(VCPKG_MANIFEST_FEATURES  "" CACHE STRING "vcpkg features")
-
-project(libndtp VERSION 0.0.1)
+if(NOT DEFINED LIBNDTP_VERSION)
+  set(LIBNDTP_VERSION "0.0.1" CACHE STRING "Version of libndtp")
+endif()
+project(libndtp VERSION ${LIBNDTP_VERSION})
 
 set(TARGET_NAME "science-${PROJECT_NAME}")
 

@@ -9,11 +9,25 @@ on:
 
 jobs:
   package:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: mac
+    runs-on: ${{ matrix.os }}
+    
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
-      - name: Check bash
+      
+      - name: Update vcpkg
+        run: |
+          cd external/microsoft/vcpkg
+          ./bootstrap-vcpkg.sh
+      
+      - name: Build and package
         run: |
           bash ops/package.sh
